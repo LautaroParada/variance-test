@@ -22,6 +22,7 @@ For a thoughtful explanation of the test, please visit the papers in which this 
 
 ## Future releases:
 
+- Publish the code into PiPy as a package.
 - Include a step by step explanation of the Variance Ratio test in QuantConnect.
 
 - Implementation of the Long Term Memory in Stock Market Prices paper of Andrew Lo. More details in the paper 
