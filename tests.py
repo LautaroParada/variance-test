@@ -22,7 +22,7 @@ if __name__=='__main__':
 	end_fake_data = time.time()
 	print('It took %.4f seconds to generate %s tickers' % (end_fake_data - start_fake_data, tickers))
 	# check the priori results for different ranges
-	# emh._stat_plot(q_range=[5, 10])
+	emh._stat_plot(q_range=[5, 10])
 	# choosen lags to lookback
 	# It's five because the aggregation represent a week of daily values
 	q = 5
