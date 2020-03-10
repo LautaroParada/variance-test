@@ -461,9 +461,9 @@ class EMH(object):
 		"""
 		if heteroskedastic:
 			z_score = self.h2(X=X, q=q, centered=centered, unbiased=unbiased, annualize=annualize)
-			p_value = st.norm.ppf(z_score)
+			p_value = 1 - st.norm.cdf(z_score)
 			return z_score, p_value
 		else:
 			z_score = self.h1(X=X, q=q, centered=centered, unbiased=unbiased, annualize=annualize)
-			p_value = st.norm.ppf(z_score)
+			p_value = 1 - st.norm.cdf(z_score)
 			return z_score, p_value
