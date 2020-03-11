@@ -11,7 +11,7 @@ if __name__=='__main__':
 	# THIS DATA FOLLOWS A BROWMIAN MODEL
 
 	# number of variables to generate
-	tickers = int(1e2)
+	tickers = int(1e4)
 	# create the object
 	emh = EMH()
 	# generate synthetic data
@@ -38,7 +38,7 @@ if __name__=='__main__':
 	z_values = []
 	p_values = []
 	for i in range(tickers):
-		_z, _p = emh.vrt(sim_prices[:, i], q, heteroskedastic=False)
+		_z, _p = emh.vrt(sim_prices[:, i], q, heteroskedastic=True)
 		z_values.append(_z)
 		p_values.append(_p)
 
