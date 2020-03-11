@@ -1,17 +1,21 @@
-# The Variance Ratio Test
 
-This statistical test proves that financial price series do have a predictability component (*at least to some degree*). The implicit logic behind the test is to reject the Random Walk Hypothesis (Efficient Markets model) via the comparison of variances estimators at different sampling intervals. 
-The idea is to investigate the quality of the Efficiency of some financial instrument under the two most commonly know null hypothesis:
+# Variance Ratio Test
 
-- The random walk with independently and identically distributed Gaussian increments (strong Efficiency). This hypothesis corresponds to the **Geometric Brownian Motion Model**, wherein volatility allows only for homoskedastic increments (constant). ***Under this hypothesis, the variance is a linear function of time.***
+These statistical tests provide a descriptive tool for ***examing the stochastic evolution*** of prices trough the time of a financial log price series. The implicit logic behind the test is to reject the Random Walk model (i.e., Efficient Markets Hypothesis) via the *comparison of variances estimators at different sampling intervals.*
 
-- The random walk with uncorrelated but heteroskedastic increments (semi-strong Efficiency). For this second hypothesis, the identically distributed assumption is relaxed and assumes that the random disturbance is independent and not identically distributed. ***This hypothesis corresponds to the Heston Model. Under this hypothesis, the variance is a non-linear function of time.***
+The idea is to investigate the quality of the Efficiency of some financial instrument log price series under the two most commonly know null hypothesis:
 
-If the test rejects both null hypotheses, we can conclude that the variance of the increments ***does not depend on Brownian motion***, and therefore asset prices have a component of predictability in their structure. That component may be exploited via a Machine Learning algorithm. 
+- **Homoskedastic Increments (strong market efficiency):** the disturbances/increments are IID normal random variables, wherein the variance of its increments is a linear function in the observation interval. This hypothesis corresponds to the Brownian Motion model.
 
-Please be aware that the results do not necessarily imply that the stock market is inefficient in the stock price formation or that prices are not rational assessments of fundamental values.
+- **Heteroskedastic Increments (semi-strong market efficiency):** the disturbances/increments are independents but not identically distributed (INID), wherein the variance of its increments is a non-linear function in the observation interval. This hypothesis corresponds to the Heston Model. 
 
-The variance-ratio test is purely a descriptive tool for examing the stochastic evolution of prices trough time.
+- **Model dependant increments (weak market efficiency):** The third form disturbances relax the independence assumption, meaning that it allows for conditional heteroskedastic increments. Therefore, the volatility either has some non-linear structure (conditional on itself), or it is conditional on another random variable. Stochastic processes which employ ARCH (Autoregressive Conditional Heteroscedasticity) and GARCH (Generalized AutoRegressive Conditional Heteroscedasticity) models of volatility belong to this category.
+
+If the test rejects the strong and the semi-strong forms of market efficiency, we can infer with enough statistical evidence **that the variance of the increments has some form of predictability in their structure.** Therefore the returns in the *price series are conditioned to the prior prices or by exogenous variable(s).*
+
+Please be aware that the results of the Variance Ratio test, do not necessarily imply that the stock market is inefficient in the stock price formation or that prices are not rational assessments of fundamental values.
+
+The Variance Ratio test is purely a descriptive tool for examing the stochastic evolution of prices trough time.
 
 For a thoughtful explanation of the test, please visit the papers in which this test is based: 
 
@@ -20,14 +24,14 @@ For a thoughtful explanation of the test, please visit the papers in which this 
 - Lo, Andrew W. and MacKinlay, Archie Craig, The Size and Power of the Variance Ratio Test in Finite Samples: a Monte Carlo Investigation (June 1988). NBER Working Paper No. t0066. Available at SSRN: [https://ssrn.com/abstract=396681](https://ssrn.com/abstract=396681)
 
 
-## Future releases:
+## Future releases will include:
 
-- Publish the code into PiPy as a package.
-- Include a step by step explanation of the Variance Ratio test in QuantConnect.
+- Distribution of the code in PiPy as a package.
+
+- Include a step by step explanation of the Variance Ratio test in [QuantConnect](www.quantconnect.com).
 
 - Implementation of the Long Term Memory in Stock Market Prices paper of Andrew Lo. More details in the paper 
 
+    - Lo, Andrew W., Long-Term Memory in Stock Market Prices (May 1989). NBER Working Paper No. w2984. Available at SSRN: [https://ssrn.com/abstract=463442](https://ssrn.com/abstract=463442)
 
-	- Lo, Andrew W., Long-Term Memory in Stock Market Prices (May 1989). NBER Working Paper No. w2984. Available at SSRN: [https://ssrn.com/abstract=463442](https://ssrn.com/abstract=463442)
-
-- Implementation of several market Efficiency tests.
+- Implementation of other market Efficiency tests.
