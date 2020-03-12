@@ -8,7 +8,9 @@ if __name__=='__main__':
 	from main import EMH
 
 	# TESTING THE STATISTIC AGAINST GENERATED DATA
-	# THIS DATA FOLLOWS A BROWMIAN MODEL
+	# THIS DATA FOLLOWS A HESTON MODEL
+	# FOR A BROWNIAN MODEL, PLEASE CHANGE THE PARAMETER
+	# stochastic_volatility=False  (in price_processes and vrt methods)
 
 	# number of variables to generate
 	tickers = int(1e4)
