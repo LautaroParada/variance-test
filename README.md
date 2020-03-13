@@ -17,7 +17,7 @@ Please be aware that the results of the Variance Ratio test, do not necessarily 
 
 The Variance Ratio test is purely a descriptive tool for examing the stochastic evolution of prices trough time.
 
-For a thoughtful explanation of the test, please visit the papers in which this test is based: 
+For a detailed explanation of the test, please visit the papers in which this test is based: 
 
 - Lo, Andrew W. and MacKinlay, Archie Craig, Stock Market Prices Do Not Follow Random Walks: Evidence from a Simple Specification Test (February 1987). NBER Working Paper No. w2168. Available at SSRN: [https://ssrn.com/abstract=346975](https://ssrn.com/abstract=346975)
 
