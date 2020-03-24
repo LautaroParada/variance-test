@@ -1,5 +1,7 @@
 
-# Variance Ratio Test
+# Variance Ratio Test [![ForTheBadge built-with-science](http://ForTheBadge.com/images/badges/built-with-science.svg)](https://GitHub.com/Naereen/)
+
+[![Python Version](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://ansicolortags.readthedocs.io/?badge=latest) 
 
 These statistical tests provide a descriptive tool for ***examing the stochastic evolution*** of prices trough the time of a financial log price series. The implicit logic behind the test is to reject the Random Walk model (i.e., Efficient Markets Hypothesis) via the *comparison of variances estimators at different sampling intervals.*
 
