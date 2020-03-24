@@ -7,11 +7,17 @@ The idea is to investigate the quality of the Efficiency of some financial instr
 
 - **Homoskedastic Increments (strong market efficiency):** the disturbances/increments are IID normal random variables, wherein the variance of its increments is a linear function in the observation interval. This hypothesis corresponds to the Brownian Motion model.
 
+![homocedasticity](img/Homocedasticity.png)
+
 - **Heteroskedastic Increments (semi-strong market efficiency):** the disturbances/increments are independents but not identically distributed (INID), wherein the variance of its increments is a non-linear function in the observation interval. This hypothesis corresponds to the Heston Model. 
 
-- **Model dependant increments (weak market efficiency):** The third form disturbances relax the independence assumption, meaning that it allows for conditional heteroskedastic increments. Therefore, the volatility either has some non-linear structure (conditional on itself), or it is conditional on another random variable. Stochastic processes which employ ARCH (Autoregressive Conditional Heteroscedasticity) and GARCH (Generalized AutoRegressive Conditional Heteroscedasticity) models of volatility belong to this category.
+![heterocedasticty](img/Heteroscedasticity.png)
 
 If the test rejects the strong and the semi-strong forms of market efficiency, we can infer with enough statistical evidence **that the variance of the increments has some form of predictability in their structure.** Therefore the returns in the *price series are conditioned to the prior prices or by exogenous variable(s).*
+
+![rw3](img/rw3.png)
+
+- **Model dependant increments (weak market efficiency):** The third form disturbances relax the independence assumption, meaning that it allows for conditional heteroskedastic increments. Therefore, the volatility either has some non-linear structure (conditional on itself), or it is conditional on another random variable. Stochastic processes which employ ARCH (Autoregressive Conditional Heteroscedasticity) and GARCH (Generalized AutoRegressive Conditional Heteroscedasticity) models of volatility belong to this category.
 
 Please be aware that the results of the Variance Ratio test, do not necessarily imply that the stock market is inefficient in the stock price formation or that prices are not rational assessments of fundamental values.
 
@@ -35,3 +41,8 @@ For a detailed explanation of the test, please visit the papers in which this te
     - Lo, Andrew W., Long-Term Memory in Stock Market Prices (May 1989). NBER Working Paper No. w2984. Available at SSRN: [https://ssrn.com/abstract=463442](https://ssrn.com/abstract=463442)
 
 - Implementation of other market Efficiency tests.
+
+## Sources
+
+- Stuart Reid | On February. “Stock Market Prices Do Not Follow Random Walks.” Turing Finance, 8 Feb. 2016, www.turingfinance.com/stock-market-prices-do-not-follow-random-walks/
+- “Variance Ratio Test.” Breaking Down Finance, breakingdownfinance.com/finance-topics/finance-basics/variance-ratio-test/.
