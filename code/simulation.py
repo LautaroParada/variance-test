@@ -5,7 +5,7 @@ if __name__=='__main__':
 	from statistics import mean
 	import numpy as np
 	import time
-	from main import EMH
+	from variance_test import EMH
 
 	# TESTING THE STATISTIC AGAINST GENERATED DATA
 	# THIS DATA FOLLOWS A HESTON MODEL
@@ -13,7 +13,7 @@ if __name__=='__main__':
 	# stochastic_volatility=False  (in price_processes and vrt methods)
 
 	# number of variables to generate
-	tickers = int(1e4)
+	tickers = int(1e2)
 	# create the object
 	emh = EMH()
 	# generate synthetic data
