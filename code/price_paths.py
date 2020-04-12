@@ -2,7 +2,7 @@ import numpy as np
 
 class SimPaths(object):
 
-	def __init__(self, n:int, T:int, s0:float):
+	def __init__(self, n:int, T:int, s0:float=1):
 
 		self.n = n
 		self.T = T
@@ -85,7 +85,7 @@ class SimPaths(object):
 		"""
 		return mu * dt + xt + rd * np.sqrt(dt)
 
-	def _browmian_returns(self, x0:float, T:float, mu:float, rd_mu:float, rd_sigma:float, dt:float, stochastic_volatility:bool):
+	def _brownian_returns(self, x0:float, T:float, mu:float, rd_mu:float, rd_sigma:float, dt:float, stochastic_volatility:bool):
 		"""
 		"""
 		# preallocate the data
@@ -98,7 +98,7 @@ class SimPaths(object):
 
 		return X
 
-	def browmian_prices(self, mu:float=0, rd_mu:float=0, rd_sigma:float=1, stochastic_volatility:bool=False):
+	def brownian_prices(self, mu:float=0, rd_mu:float=0, rd_sigma:float=1, stochastic_volatility:bool=False):
 		"""
 		"""
 		dt = 1 / self.T
@@ -106,10 +106,10 @@ class SimPaths(object):
 
 		if self.n > 1:
 			for i in range(self.n):
-				_data[:, i] = np.exp(self._browmian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
+				_data[:, i] = np.exp(self._brownian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
 		 							  dt=dt, stochastic_volatility=stochastic_volatility))
 		else:
-			_data = np.exp(self._browmian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
+			_data = np.exp(self._brownian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
 		 							  dt=dt, stochastic_volatility=stochastic_volatility))
 
 		return _data
@@ -143,10 +143,10 @@ class SimPaths(object):
 
 		if self.n > 1:
 			for i in range(self.n):
-				_data[:, i] = np.exp(self._browmian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
+				_data[:, i] = np.exp(self._brownian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
 		 							  dt=dt, stochastic_volatility=stochastic_volatility))
 		else:
-			_data = np.exp(self._browmian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
+			_data = np.exp(self._brownian_returns(x0=np.log(self.s0), T=self.T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
 		 							  dt=dt, stochastic_volatility=stochastic_volatility))
 
 		return _data
@@ -199,7 +199,7 @@ class SimPaths(object):
 	def _merton_returns(self, x0:float, T:float, jumps:int, mu:float, rd_mu:float, rd_sigma:float, dt:float, stochastic_volatility:bool):
 		"""
 		"""
-		geometric_brownian_motion = self._browmian_returns(x0=x0, T=T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
+		geometric_brownian_motion = self._brownian_returns(x0=x0, T=T, mu=mu, rd_mu=rd_mu, rd_sigma=rd_sigma,
 		 													dt=dt, stochastic_volatility=stochastic_volatility)
 
 		jump_diffusion = self._jumps_diffusion(lam=jumps)
