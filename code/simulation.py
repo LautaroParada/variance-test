@@ -5,7 +5,9 @@ if __name__=='__main__':
 	from statistics import mean
 	import numpy as np
 	import time
-	from main import EMH
+	from variance_test import *
+	from price_paths import *
+	from visuals import *
 
 	# TESTING THE STATISTIC AGAINST GENERATED DATA
 	# THIS DATA FOLLOWS A HESTON MODEL
@@ -13,24 +15,35 @@ if __name__=='__main__':
 	# stochastic_volatility=False  (in price_processes and vrt methods)
 
 	# number of variables to generate
-	tickers = int(1e4)
-	# create the object
+	tickers = 1000
+	# create the objects
+	sims = SimPaths(n=tickers, T=252)
 	emh = EMH()
-	# generate synthetic data
+
+	# # generate synthetic data
 	start_fake_data = time.time()
-	sim_prices = emh.price_processes(n=tickers)
+
+	browmians = sims.brownian_prices()
+	gbms = sims.gbm_prices()
+	mertons = sims.merton_prices()
+
+	_sim = np.hstack((browmians, gbms))
+	sim_prices = np.hstack((_sim, mertons))
 
 	# Measuring time
 	end_fake_data = time.time()
-	print('It took %.4f seconds to generate %s tickers' % (end_fake_data - start_fake_data, tickers))
+	print(f'It took {end_fake_data - start_fake_data} seconds')
+
 	# check the priori results for different ranges
-	emh._stat_plot(q_range=[5, 10])
+	vrt_visuals = VRTVisuals()
+	vrt_visuals.stat_plot(process='merton', total_samples=1000)
+	
 	# choosen lags to lookback
 	# It's five because the aggregation represent a week of daily values
 	q = 5
 	print('\nMarket simulated prices')
 	# plot the head of the numpy matrix
-	print(sim_prices[:5, :2])
+	print(sim_prices.shape)
 	# generate the asymtotic values - to compare the stadistics against the real
 	# values of a distribuition
 	dist_values = np.random.normal(0, 1, tickers)
@@ -50,5 +63,5 @@ if __name__=='__main__':
 	print(f'The mean values for the z-values is {mean(z_values)}')
 
 	# plot the results obtained on simulated asset prices
-	emh._densities(dist_values, z_values)
+	vrt_visuals.densities(dist_values, z_values)
 
