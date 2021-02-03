@@ -14,7 +14,7 @@ class PricePaths(object):
 	# The Brownian Motion Stochastic Process (Wiener Process)
 	# -------------------------------------------
     
-    def brownian_prices(self, mu:float, sigma:float, sto_vol:bool):
+    def brownian_prices(self, mu:float, sigma:float, sto_vol:bool=False):
         
         # preallocate the data
         bro_prices = np.zeros((self.T, self.n))
@@ -29,6 +29,21 @@ class PricePaths(object):
             bro_prices = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
             
         return bro_prices
+    
+    def gbm_prices(self, mu:float, sigma:float, sto_vol:bool=True):
+        # preallocate the data
+        gbm_prices = np.zeros((self.T, self.n))
+        
+        # check the size of the output matrix
+        if self.n > 1:
+            for i in range(self.n):
+                # simulate n price paths
+                gbm_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol)
+        else:
+            # case for only 1 simulation
+            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
+            
+        return gbm_prices
 
 	# -------------------------------------------
 	# Helper methods
@@ -49,8 +64,7 @@ class PricePaths(object):
                 self.__brownian_discrete(mu, sigma, st=bro_returns[t-1], vol=volatility[t])
                 
         return bro_returns
-        
-
+    
 	# -------------------------------------------
 	# General utilities
 	# -------------------------------------------
@@ -60,4 +74,8 @@ class PricePaths(object):
         if not sto_vol:
             return np.random.normal(size=(self.T, 1))
         else:
-            return np.random.normal(loc=rd_mu, scale=rd_sigma, size=(self.T, 1))
+            # error handling for scale < 0, because negative volatilities 
+            # doesn makes sense.
+            return np.random.normal(loc=rd_mu * self.h,
+                                    scale=np.abs(rd_sigma * np.random.normal() * np.sqrt(self.h)),
+                                    size=(self.T, 1))
