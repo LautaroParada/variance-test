@@ -17,6 +17,8 @@ Suppose the test rejects the strong and the semi-strong forms of market efficien
 
 - **Model dependant increments** (*weak market efficiency*): The third form disturbances relax the independence assumption, meaning that it allows for conditional heteroskedastic increments. Therefore, the volatility either has some non-linear structure (conditional on itself) or conditional on another random variable. Stochastic processes that employ ARCH (Autoregressive Conditional Heteroscedasticity) and GARCH (Generalized AutoRegressive Conditional Heteroscedasticity) models of volatility belong to this category.
 
+![rw3](img/rw3.png)
+
 Please be aware that the Variance Ratio test results do not necessarily imply that the stock market is inefficient in the stock price formation or that prices are not rational assessments of fundamental values. The Variance Ratio test is purely a descriptive tool for examing the stochastic evolution of prices through time. For a detailed explanation of the test, please visit the papers in which this test is based:
 
 - Lo, Andrew W. and MacKinlay, Archie Craig, Stock Market Prices Do Not Follow Random Walks: Evidence from a Simple Specification Test (February 1987). NBER Working Paper No. w2168. Available at SSRN: https://ssrn.com/abstract=346975
@@ -34,4 +36,4 @@ Lo, Andrew W., Long-Term Memory in Stock Market Prices (May 1989). NBER Working 
 Sources:
 
 - Stuart Reid | On February. "Stock Market Prices Do Not Follow Random Walks." Turing Finance, 8 Feb. 2016, www.turingfinance.com/stock-market-prices-do-not-follow-random-walks/
-- "Variance Ratio Test." Breaking Down Finance, [breakingdownfinance.com/finance-topics/finance-basics/variance-ratio-test/](www.breakingdownfinance.com/finance-topics/finance-basics/variance-ratio-test/)
+- "Variance Ratio Test." Breaking Down Finance, [breakingdownfinance.com/finance-topics/finance-basics/variance-ratio-test/](breakingdownfinance.com/finance-topics/finance-basics/variance-ratio-test/)
