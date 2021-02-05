@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import halfnorm
 
 class PricePaths(object):
     
@@ -37,7 +38,7 @@ class PricePaths(object):
     def gbm_prices(self, mu:float, sigma:float, sto_vol:bool=True):
         # preallocate the data
         gbm_prices = self.__zeros()
-        
+
         # check the size of the output matrix
         if self.n > 1:
             for i in range(self.n):
@@ -46,7 +47,7 @@ class PricePaths(object):
         else:
             # case for only 1 simulation
             gbm_prices = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
-            
+
         return gbm_prices
     
 	# -------------------------------------------
@@ -64,7 +65,7 @@ class PricePaths(object):
                 mert_prices[:, i] = self.__merton_returns(mu, sigma, lambda_, sto_vol)
         else:
             # case for only 1 simulation
-            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol)
+            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol).reshape(-1, 1)
 
 	# -------------------------------------------
 	# Helper methods
@@ -76,19 +77,19 @@ class PricePaths(object):
         t = 0
         jumps = np.zeros((self.T, 1))
         lambda__ = lambda_ / self.T
-        small_lambda = -( 1.0 / lambda__ )
+        small_lambda = -(1.0/lambda__)
         pd = np.random.poisson(lam=lambda_, size=(self.T))
         
         # applying the psudo-code of the algorithm
         for i in range(self.T):
             t = t + small_lambda * np.log(np.random.uniform())
             if t >= self.T:
-                jumps[i:] = ( np.mean(pd) * np.random.uniform() + np.std(pd) ** np.random.choice([-1, 1]) )
+                jumps[i:] = (np.mean(pd)*np.random.uniform()+np.std(pd) ** np.random.choice([-1, 1]))
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
                 t = small_lambda
                 
-        return jumps
+        return jumps.reshape(-1, 1)
                 
     def __merton_returns(self, mu:float, sigma:float, lambda_:int, sto_vol:float):
         geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol)
@@ -115,16 +116,38 @@ class PricePaths(object):
 	# General utilities
 	# -------------------------------------------
     
-    def __random_disturbance(self, sto_vol:bool, rd_mu:float=0.0, rd_sigma:float=1.0):
+    def __random_disturbance(self, sto_vol:bool, rd_mu:float, rd_sigma:float):
         
         if not sto_vol:
             return np.random.normal(size=(self.T, 1))
         else:
             # error handling for scale < 0, because negative volatilities 
-            # doesn makes sense.
+            # doesnt makes sense.
             return np.random.normal(loc=rd_mu * self.h,
-                                    scale=np.abs(rd_sigma * np.random.normal() * np.sqrt(self.h)),
-                                    size=(self.T, 1))
+                                    scale=rd_sigma * halfnorm.rvs(1) * np.sqrt(self.h),
+                                    size=(self.T, 1)) * 100
+        return
         
     def __zeros(self):
         return np.zeros((self.T, self.n))
+
+
+if __name__=='__main__':
+    
+    import matplotlib.pyplot as plt
+    
+    sim = PricePaths(100, 10000, 1)
+    
+    mu = 0.05
+    sigma = 0.1
+    
+    bro = sim.brownian_prices(mu, sigma)
+    gbm = sim.gbm_prices(mu, sigma)
+    merton = sim.merton_prices(mu, sigma, lambda_=50)
+    
+    plt.plot(bro, label='Brownian')
+    plt.plot(gbm, label='GBM')
+    plt.title('Simulated price paths')
+    plt.ylabel('price')
+    plt.xlabel('step')
+    plt.legend()
