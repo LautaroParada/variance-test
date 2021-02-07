@@ -10,6 +10,17 @@ class PricePaths(object):
         self.s0 = s0    # initial price
         
         self.h = self.n / self.T
+        
+        # DEBBUING SPACE
+        self.t = None
+        self.jumps = None
+        self.lambda__ = None
+        self.small_lambda = None
+        self.pd = None
+        
+        self.geometric_brownian_motion = None
+        self.jumps_diffusion = None
+        self.mert_prices_ = None
 
 	# -------------------------------------------
 	# The Brownian Motion Stochastic Process (Wiener Process)
@@ -65,7 +76,8 @@ class PricePaths(object):
                 mert_prices[:, i] = self.__merton_returns(mu, sigma, lambda_, sto_vol)
         else:
             # case for only 1 simulation
-            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol).reshape(-1, 1)
+            self.mert_prices_ = self.__merton_returns(mu, sigma, lambda_, sto_vol)
+            return self.mert_prices_
 
 	# -------------------------------------------
 	# Helper methods
@@ -74,27 +86,27 @@ class PricePaths(object):
     # Merton Jump Diffusion Stochastic Process
     
     def __jumps_diffusion(self, lambda_:int):
-        t = 0
-        jumps = np.zeros((self.T, 1))
-        lambda__ = lambda_ / self.T
-        small_lambda = -(1.0/lambda__)
-        pd = np.random.poisson(lam=lambda__, size=(self.T))
+        self.t = 0
+        self.jumps = np.zeros((self.T, 1))
+        self.lambda__ = lambda_ / self.T
+        self.small_lambda = -(1.0/self.lambda__)
+        self.pd = np.random.poisson(lam=self.lambda__, size=(self.T))
         
         # applying the psudo-code of the algorithm
         for i in range(self.T):
-            t += small_lambda * np.log(np.random.uniform())
-            if t > self.T:
-                jumps[i:] = (np.mean(pd)*np.random.uniform()+np.std(pd)) * np.random.choice([-1, 1])
+            self.t += self.small_lambda * np.log(np.random.uniform())
+            if self.t > self.T:
+                self.jumps[i:] = (np.mean(self.pd)*np.random.uniform()+np.std(self.pd)) * np.random.choice([-1, 1])
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
-                t = small_lambda
+                self.t = self.small_lambda
                 
-        return jumps.reshape(-1, 1)
+        return self.jumps.reshape(-1, 1)
                 
     def __merton_returns(self, mu:float, sigma:float, lambda_:int, sto_vol:bool):
-        geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
-        jump_diffusion = self.__jumps_diffusion(lambda_)
-        return geometric_brownian_motion + jump_diffusion
+        self.geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
+        self.jump_diffusion = self.__jumps_diffusion(lambda_)
+        return self.geometric_brownian_motion + self.jump_diffusion
     
 	# Brownian Motion Stochastic Process (Wiener Process)
     
@@ -136,11 +148,15 @@ if __name__=='__main__':
     
     import matplotlib.pyplot as plt
     
-    sim = PricePaths(1, 1000, 1)
+    n = 1
+    T = 1000
+    s0 = 1
+    
+    sim = PricePaths(n, T, s0)
     
     mu = 0.05
     sigma = 0.1
-    lam = 50
+    lam = T/20
     
     bro = sim.brownian_prices(mu, sigma)
     gbm = sim.gbm_prices(mu, sigma)
