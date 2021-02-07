@@ -10,17 +10,6 @@ class PricePaths(object):
         self.s0 = s0    # initial price
         
         self.h = self.n / self.T
-        
-        # DEBBUING SPACE
-        self.t = None
-        self.jumps = None
-        self.lambda__ = None
-        self.small_lambda = None
-        self.pd = None
-        
-        self.geometric_brownian_motion = None
-        self.jumps_diffusion = None
-        self.mert_prices_ = None
 
 	# -------------------------------------------
 	# The Brownian Motion Stochastic Process (Wiener Process)
@@ -38,7 +27,7 @@ class PricePaths(object):
                 bro_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol)
         else:
             # case for only 1 simulation
-            bro_prices = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
+            bro_prices = self.__brownian_returns(mu, sigma, sto_vol)
             
         return bro_prices
     
@@ -57,7 +46,7 @@ class PricePaths(object):
                 gbm_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol)
         else:
             # case for only 1 simulation
-            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
+            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol)
 
         return gbm_prices
     
@@ -76,8 +65,9 @@ class PricePaths(object):
                 mert_prices[:, i] = self.__merton_returns(mu, sigma, lambda_, sto_vol)
         else:
             # case for only 1 simulation
-            self.mert_prices_ = self.__merton_returns(mu, sigma, lambda_, sto_vol)
-            return self.mert_prices_
+            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol)
+        
+        return mert_prices
 
 	# -------------------------------------------
 	# Helper methods
@@ -86,27 +76,28 @@ class PricePaths(object):
     # Merton Jump Diffusion Stochastic Process
     
     def __jumps_diffusion(self, lambda_:int):
-        self.t = 0
-        self.jumps = np.zeros((self.T, 1))
-        self.lambda__ = lambda_ / self.T
-        self.small_lambda = -(1.0/self.lambda__)
-        self.pd = np.random.poisson(lam=self.lambda__, size=(self.T))
+        t = 0
+        jumps = np.zeros((self.T, 1))
+        lambda__ = lambda_ / self.T
+        small_lambda = -(1.0/lambda__)
+        pd = np.random.poisson(lam=lambda__, size=(self.T))
         
         # applying the psudo-code of the algorithm
         for i in range(self.T):
-            self.t += self.small_lambda * np.log(np.random.uniform())
-            if self.t > self.T:
-                self.jumps[i:] = (np.mean(self.pd)*np.random.uniform()+np.std(self.pd)) * np.random.choice([-1, 1])
+            t += small_lambda * np.log(np.random.uniform())
+            if t > self.T:
+                jumps[i:] = ( np.mean(pd)*np.random.uniform() ) * np.random.choice([-1, 1])
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
-                self.t = self.small_lambda
+                t = small_lambda
+                break
                 
-        return self.jumps.reshape(-1, 1)
+        return jumps.reshape(-1, 1)
                 
     def __merton_returns(self, mu:float, sigma:float, lambda_:int, sto_vol:bool):
-        self.geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
-        self.jump_diffusion = self.__jumps_diffusion(lambda_)
-        return self.geometric_brownian_motion + self.jump_diffusion
+        geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
+        jump_diffusion = self.__jumps_diffusion(lambda_)
+        return (geometric_brownian_motion + jump_diffusion).ravel()
     
 	# Brownian Motion Stochastic Process (Wiener Process)
     
@@ -147,6 +138,7 @@ class PricePaths(object):
 if __name__=='__main__':
     
     import matplotlib.pyplot as plt
+    import seaborn as sns
     
     n = 1
     T = 1000
@@ -155,12 +147,17 @@ if __name__=='__main__':
     sim = PricePaths(n, T, s0)
     
     mu = 0.05
-    sigma = 0.1
-    lam = T/20
+    sigma = 0.05
+    lam = 100
     
     bro = sim.brownian_prices(mu, sigma)
     gbm = sim.gbm_prices(mu, sigma)
-    merton = sim.merton_prices(mu, sigma, lambda_=lam)
+    merton = sim.merton_prices(mu, sigma, lam)
+    
+    all_proc = np.vstack((bro, gbm, merton))
+    sns.heatmap(np.corrcoef(all_proc), xticklabels=False, yticklabels=False)
+    plt.title('Correlation across the simulated instruments')
+    plt.show()
     
     plt.plot(bro, label='Brownian')
     plt.plot(gbm, label='GBM')
@@ -169,3 +166,4 @@ if __name__=='__main__':
     plt.ylabel('price')
     plt.xlabel('step')
     plt.legend()
+    plt.show()
