@@ -78,21 +78,21 @@ class PricePaths(object):
         jumps = np.zeros((self.T, 1))
         lambda__ = lambda_ / self.T
         small_lambda = -(1.0/lambda__)
-        pd = np.random.poisson(lam=lambda_, size=(self.T))
+        pd = np.random.poisson(lam=lambda__, size=(self.T))
         
         # applying the psudo-code of the algorithm
         for i in range(self.T):
-            t = t + small_lambda * np.log(np.random.uniform())
-            if t >= self.T:
-                jumps[i:] = (np.mean(pd)*np.random.uniform()+np.std(pd) ** np.random.choice([-1, 1]))
+            t += small_lambda * np.log(np.random.uniform())
+            if t > self.T:
+                jumps[i:] = (np.mean(pd)*np.random.uniform()+np.std(pd)) * np.random.choice([-1, 1])
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
                 t = small_lambda
                 
         return jumps.reshape(-1, 1)
                 
-    def __merton_returns(self, mu:float, sigma:float, lambda_:int, sto_vol:float):
-        geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol)
+    def __merton_returns(self, mu:float, sigma:float, lambda_:int, sto_vol:bool):
+        geometric_brownian_motion = self.__brownian_returns(mu, sigma, sto_vol).reshape(-1, 1)
         jump_diffusion = self.__jumps_diffusion(lambda_)
         return geometric_brownian_motion + jump_diffusion
     
@@ -136,17 +136,19 @@ if __name__=='__main__':
     
     import matplotlib.pyplot as plt
     
-    sim = PricePaths(100, 10000, 1)
+    sim = PricePaths(1, 1000, 1)
     
     mu = 0.05
     sigma = 0.1
+    lam = 50
     
     bro = sim.brownian_prices(mu, sigma)
     gbm = sim.gbm_prices(mu, sigma)
-    merton = sim.merton_prices(mu, sigma, lambda_=50)
+    merton = sim.merton_prices(mu, sigma, lambda_=lam)
     
     plt.plot(bro, label='Brownian')
     plt.plot(gbm, label='GBM')
+    plt.plot(merton, label='Merton')
     plt.title('Simulated price paths')
     plt.ylabel('price')
     plt.xlabel('step')
