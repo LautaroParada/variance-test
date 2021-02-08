@@ -86,10 +86,42 @@ class PricePaths(object):
             ou_rates = self.__vas_returns(mu, sigma, lambda_, sto_vol)
         
         return ou_rates
+    
+	# -------------------------------------------
+	# Cox Ingersoll Ross (CIR) stochastic proces - RATES
+	# -------------------------------------------
+    
+    def cir_rates(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False):
+        cir_rates_ = self.__zeros()
+        
+        if self.n > 1:
+            for i in range(self.n):
+                cir_rates_[:, i] = self.__cir_return(mu, sigma, lambda_, sto_vol)
+        else:
+            cir_rates_ = self.__cir_return(mu, sigma, lambda_, sto_vol)
+        
+        return cir_rates_
 
 	# -------------------------------------------
 	# Helper methods
 	# -------------------------------------------
+    
+    # Cox Ingersoll Ross
+    
+    def __cir_discrete(self, mu:float, sigma:float, lambda_:float, xt:float, vol:float):
+        return lambda_ * (mu-xt) * self.h + sigma * np.sqrt(xt*self.h) * vol
+    
+    def __cir_return(self, mu:float, sigma:float, lambda_:float, sto_vol:bool):
+        
+        volatility = self.__random_disturbance(sto_vol, mu, sigma)
+        cir_ret = np.zeros(self.T)
+        
+        cir_ret[0] = self.r0
+            
+        for t in range(1, self.T):
+            cir_ret[t] = cir_ret[t-1] + self.__cir_discrete(mu, sigma, lambda_, cir_ret[t-1], volatility[t])
+            
+        return cir_ret
     
     # Vasicek Interest Rate Model
     
@@ -214,12 +246,14 @@ if __name__=='__main__':
     sim = PricePaths(n, T, r0)
     
     mu = r0/100             # Long term rate %
-    sigma = 0.01            # Volatility %
+    sigma = 0.001           # Volatility %
     lam = 0.7               # Reversion speed -> 0 <= lambda <= 1
     
     vas = sim.vas_rates(mu, sigma, lambda_=lam)
+    cir = sim.cir_rates(mu, sigma, lambda_=lam)
     
     plt.plot(vas, label='Vasicek')
+    plt.plot(cir, label='Cox-Ingersoll-Ross')
     plt.plot(np.ones(sim.T) * mu, color='red')
     plt.title('Simulated rate paths')
     plt.ylabel('rate')
