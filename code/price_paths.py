@@ -101,10 +101,65 @@ class PricePaths(object):
             cir_rates_ = self.__cir_return(mu, sigma, lambda_, sto_vol)
         
         return cir_rates_
+    
+    # -------------------------------------------
+	# Heston Stochastic Volatility Process
+	# -------------------------------------------
+    
+    def heston_prices(self, rf:float, k:float, theta:float, sigma:float, sto_vol:bool=False):
+        hes_prices = self.__zeros()
+        
+        if self.n > 1:
+            for i in range(self.n):
+                hes_prices[i] = self.__heston_returns(rf, k, theta, sigma, sto_vol)
+                
+        else:
+            hes_prices = self.__heston_returns(rf, k, theta, sigma, sto_vol)
+            
+        return hes_prices
 
 	# -------------------------------------------
 	# Helper methods
 	# -------------------------------------------
+    
+    # Heston Stochastic Volatility Process
+    
+    def __heston_dis_vol(self, k:float, theta:float, vt:float, sigma:float, w2:float):
+        # heston mean reverting volatility recurrence
+        return k * (theta - vt) * self.h + sigma * np.sqrt(np.abs(vt) * self.h) * w2
+    
+    def __heston_discrete(self, rf:float, st:float, V, w1):
+        # Discrete form of the Heston model
+        return rf * st *self.h + np.sqrt(np.abs(V) * self.h) * st * w1
+    
+    def __heston_returns(self, rf:float, k:float, theta:float, sigma:float, sto_vol:bool):
+        
+        # integrate a random correlation level
+        corr_wn1, corr_wn2 = self.__corr_noise()
+        
+        # integrating the mean reverting volatility
+        wn2 = self.__random_disturbance(sto_vol=sto_vol, rd_mu=0, rd_sigma=0)
+        dw2 = np.zeros(self.T)
+        dw2[0] = corr_wn2[0]
+        
+        for t in range(1, self.T):
+            dw2[t] = self.__heston_dis_vol(k=k, 
+                                           theta=theta, 
+                                           vt=corr_wn2[t], 
+                                           sigma=sigma, 
+                                           w2=wn2[t])
+            
+        # creating the actual data for the process
+        heston_ret = np.zeros(self.T)
+        heston_ret[0] = self.s0
+        
+        for t in range(1, self.T):
+            heston_ret[t] = heston_ret[t-1] + self.__heston_discrete(rf=rf, 
+                                                                     st=heston_ret[t-1], 
+                                                                     V=dw2[t], 
+                                                                     w1=corr_wn1[t])
+            
+        return heston_ret
     
     # Cox Ingersoll Ross
     
@@ -139,7 +194,6 @@ class PricePaths(object):
             
         return vas_rets
         
-    
     # Merton Jump Diffusion Stochastic Process
     
     def __jumps_diffusion(self, lambda_:int):
@@ -153,7 +207,7 @@ class PricePaths(object):
         for i in range(self.T):
             t += small_lambda * np.log(np.random.uniform())
             if t > self.T:
-                jumps[i:] = ( np.mean(pd)*np.random.uniform() ) * np.random.choice([-1, 1])
+                jumps[i:] = ( (np.mean(pd) + np.std(pd)) * np.random.uniform() ) * np.random.choice([-1, 1])
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
                 t = small_lambda
@@ -200,6 +254,24 @@ class PricePaths(object):
         
     def __zeros(self):
         return np.zeros((self.T, self.n))
+    
+    def __corr_noise(self):
+        
+        # generate two uncorrelated Brownian processes
+        z1 = self.__random_disturbance(sto_vol=False, rd_mu=0, rd_sigma=1)
+        z2 = self.__random_disturbance(sto_vol=False, rd_mu=0, rd_sigma=1)
+        
+        # randomly create an absolute correlation
+        rho = np.random.uniform(low=0.5, high=1)
+        
+        corr1 = np.sqrt( (1 + rho) / 2 )
+        corr2 = np.sqrt( (1 - rho) / 2 )
+        
+        # correlating the brownian processes
+        dw1 = corr1 * z1 + corr2 * z2
+        dw2 = corr1 * z1 - corr2 * z2
+        
+        return dw1, dw2
 
 #%% Run the simulation
 
@@ -207,6 +279,7 @@ if __name__=='__main__':
     
     import matplotlib.pyplot as plt
     import seaborn as sns
+    import pandas as pd
     
     n = 1                   # number of time series to simulate
     T = 1000                # number of steps
@@ -216,21 +289,24 @@ if __name__=='__main__':
     
     mu = 0.05               # Long term mean return
     sigma = 0.05            # Volatility
-    lam = 100               # Intensity of the Jump (Merton process)
+    lam = 500               # Intensity of the Jump (Merton process)
     
     bro = sim.brownian_prices(mu, sigma)
     gbm = sim.gbm_prices(mu, sigma)
     merton = sim.merton_prices(mu, sigma, lam)
+    hes = sim.heston_prices(rf=0.0, k=0.5, theta=1.0, sigma=sigma)
     
-    all_proc = np.vstack((bro, gbm, merton))
-    sns.heatmap(np.corrcoef(all_proc), xticklabels=False, yticklabels=False)
+    all_proc = pd.DataFrame(np.vstack((bro, gbm, merton, hes)).T, columns=['Brownian', 'GBM', 'Merton', 'Heston'])
+    heatmap  = sns.heatmap(all_proc.corr(), cmap="RdYlGn", cbar_kws={'label': 'Correlation across the models'}, annot=True)
     plt.title('Correlation across the simulated instruments')
+    heatmap.set_yticklabels(heatmap.get_yticklabels(), rotation=0) 
     plt.show()
     
     # Price plots
     plt.plot(bro, label='Brownian')
     plt.plot(gbm, label='GBM')
     plt.plot(merton, label='Merton')
+    plt.plot(hes, label='Heston')
     plt.title('Simulated price paths')
     plt.ylabel('price')
     plt.xlabel('step')
