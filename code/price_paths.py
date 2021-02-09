@@ -111,7 +111,7 @@ class PricePaths(object):
         
         if self.n > 1:
             for i in range(self.n):
-                hes_prices[i] = self.__heston_returns(rf, k, theta, sigma, sto_vol)
+                hes_prices[:, i] = self.__heston_returns(rf, k, theta, sigma, sto_vol)
                 
         else:
             hes_prices = self.__heston_returns(rf, k, theta, sigma, sto_vol)
@@ -159,7 +159,7 @@ class PricePaths(object):
                                                                      V=dw2[t], 
                                                                      w1=corr_wn1[t])
             
-        return heston_ret
+        return heston_ret.ravel()
     
     # Cox Ingersoll Ross
     
