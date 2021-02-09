@@ -1,71 +1,67 @@
-# test the class
+# Run the simulation
+
 if __name__=='__main__':
-
-
-	from statistics import mean
-	import numpy as np
-	import time
-	from variance_test import *
-	from price_paths import *
-	from visuals import *
-
-	# TESTING THE STATISTIC AGAINST GENERATED DATA
-	# THIS DATA FOLLOWS A HESTON MODEL
-	# FOR A BROWNIAN MODEL, PLEASE CHANGE THE PARAMETER
-	# stochastic_volatility=False  (in price_processes and vrt methods)
-
-	# number of variables to generate
-	tickers = 1000
-	# create the objects
-	sims = SimPaths(n=tickers, T=252)
-	emh = EMH()
-
-	# # generate synthetic data
-	start_fake_data = time.time()
-
-	sims = SimPaths(n=500, T=252, s0=100)
-
-	browmians = sims.brownian_prices()
-	gbms = sims.gbm_prices()
-	mertons = sims.merton_prices()
-	ous = sims.ou_prices(mu=100)
-	hestons = sims.heston_prices(mu=1, kappa=0.2, lamba=0.02, rho=0.85)
-
-	# stacking all prices in just one matrix
-	prices = np.hstack((browmians, gbms, mertons, ous, hestons))
-
-	# Measuring time
-	end_fake_data = time.time()
-	print(f'It took {end_fake_data - start_fake_data} seconds generate synthetic data')
-
-	# check the priori results for different ranges
-	vrt_visuals = VRTVisuals()
-	vrt_visuals.stat_plot(process='merton', total_samples=1000)
-	
-	# choosen lags to lookback
-	# It's five because the aggregation represent a week of daily values
-	q = 5
-	print('\nMarket simulated prices')
-	# plot the head of the numpy matrix
-	print(prices.shape)
-	# generate the asymtotic values - to compare the stadistics against the real
-	# values of a distribuition
-	dist_values = np.random.normal(0, 1, tickers)
-	# calculate the stadistics
-	start_vrt = time.time()
-
-	z_values = []
-	p_values = []
-	for i in range(tickers):
-		_z, _p = emh.vrt(prices[:, i], q, heteroskedastic=True)
-		z_values.append(_z)
-		p_values.append(_p)
-
-	end_vrt = time.time()
-	print('It took %.4f seconds to calculate the statistics for %s tickers' % (end_vrt - start_vrt, tickers))
-	# check the cetral measures for the z-values
-	print(f'The mean values for the p-values is {mean(p_values)}')
-
-	# plot the results obtained on simulated asset prices
-	vrt_visuals.densities(dist_values, z_values)
-
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas as pd
+    from price_paths import PricePaths
+    from variance_test import EMH
+    from visuals import VRTVisuals
+    
+    n = 1                   # number of time series to simulate
+    T = 1000                # number of steps
+    s0 = 1                  # Initial price or initial short term rate
+    
+    sim = PricePaths(n, T, s0)
+    
+    mu = 0.05               # Long term mean return
+    sigma = 0.05            # Volatility
+    lam = 500               # Intensity of the Jump (Merton process)
+    
+    bro = sim.brownian_prices(mu, sigma)
+    gbm = sim.gbm_prices(mu, sigma)
+    merton = sim.merton_prices(mu, sigma, lam)
+    hes = sim.heston_prices(rf=0.0, k=0.5, theta=1.0, sigma=sigma)
+    
+    all_proc = pd.DataFrame(np.vstack((bro, gbm, merton, hes)).T, columns=['Brownian', 'GBM', 'Merton', 'Heston'])
+    heatmap  = sns.heatmap(all_proc.corr(), cmap="RdYlGn", cbar_kws={'label': 'Correlation across the models'}, annot=True)
+    plt.title('Correlation across the simulated instruments')
+    heatmap.set_yticklabels(heatmap.get_yticklabels(), rotation=0) 
+    plt.show()
+    
+    # Price plots
+    plt.plot(bro, label='Brownian')
+    plt.plot(gbm, label='GBM')
+    plt.plot(merton, label='Merton')
+    plt.plot(hes, label='Heston')
+    plt.title('Simulated price paths')
+    plt.ylabel('price')
+    plt.xlabel('step')
+    plt.legend()
+    plt.show()
+    
+    # Rate plots
+    
+    n = 1                   # number of time series to simulate
+    T = 1000                # number of steps
+    r0 = 3.0                # Initial short term rate
+    
+    sim = PricePaths(n, T, r0)
+    
+    mu = r0/100             # Long term rate %
+    sigma = 0.001           # Volatility %
+    lam = 0.7               # Reversion speed -> 0 <= lambda <= 1
+    
+    vas = sim.vas_rates(mu, sigma, lambda_=lam)
+    cir = sim.cir_rates(mu, sigma, lambda_=lam)
+    
+    plt.plot(vas, label='Vasicek')
+    plt.plot(cir, label='Cox-Ingersoll-Ross')
+    plt.plot(np.ones(sim.T) * mu, color='red')
+    plt.title('Simulated rate paths')
+    plt.ylabel('rate')
+    plt.xlabel('step')
+    plt.legend()
+    plt.show()

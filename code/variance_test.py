@@ -1,5 +1,4 @@
 import numpy as np
-from price_paths import *
 import scipy.stats as st
 
 class EMH(object):

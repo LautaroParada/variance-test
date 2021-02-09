@@ -5,8 +5,8 @@ import seaborn as sns
 sns.set_style('whitegrid')
 
 import numpy as np
-from variance_test import *
-from simulation import *
+from variance_test import EMH
+from price_paths import PricePaths
 
 class VRTVisuals(object):
 
@@ -37,7 +37,7 @@ class VRTVisuals(object):
 
 	    """
 	    # creating the objecto for the price paths
-	    sims = SimPaths(n=1, T=total_samples*2)
+	    sims = PricePaths(n=1, T=total_samples*2)
 
 	    if process == 'brownian':
 	    	_simulator = sims.brownian_prices
