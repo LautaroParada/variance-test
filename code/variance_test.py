@@ -9,8 +9,9 @@ class EMH(object):
 
 	def _mu(self, X, annualize:bool =True):
 		"""
-	    Given a log price process, this function estimates the value of mu_hat. Mu is the daily 
-	    component of the returns which is attributable to upward, or downward drift. 
+	    Given a log price process, this function estimates the value of mu_hat. 
+        Mu is the daily component of the returns which is attributable to upward, 
+        or downward drift. 
 	    This estimator correspond to the maximum-likelihood estimator of mu_hat
 	    This estimate can be annualized.
 	    
@@ -23,17 +24,17 @@ class EMH(object):
 		"""
 		n = X.shape[0]
 		if annualize:
-			return ( 1 / n ) * ( X[-1] - X[0] ) * 252 # python indexation
+			return ( 1 / n ) * ( X[-1] - X[0] ) * 252
 		else:
-			return ( 1 / n ) * ( X[-1] - X[0] )		# python indexation, starts at 0
+			return ( 1 / n ) * ( X[-1] - X[0] )
 
 	def _vol_a(self, X, q:int =1, unbiased:bool =True, annualize:bool =True):
 		"""
 		This function calculates 'the sample variance of the first-difference of
 		X; it corresponds to the maximum likelihood-estimator of the variance 
-		parameter and therefore possesses the usal consistency, asymptotic normality
-		and efficiency properties.' 
-							Andrew Lo, The Size and Power of the Variance Ratio Test
+		parameter and therefore possesses the usal consistency, asymptotic 
+        normality and efficiency properties.'
+        Andrew Lo, The Size and Power of the Variance Ratio Test
 
 		Args:
 			X(numpy array): A log pricess process
