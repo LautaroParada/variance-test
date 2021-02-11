@@ -56,10 +56,10 @@ class VRTVisuals(object):
 	    
 	    # setting the desired statistic
 	    if  stat_type == 'md':
-	        stat = EMH()._md
+	        stat = EMH()._EMH__md
 	        statName = stat_type.capitalize() # capitalize the name
 	    elif stat_type == 'mr':
-	        stat = EMH()._mr
+	        stat = EMH()._EMH__mr
 	        statName = stat_type.capitalize() # capitalize the name
 	    else:
 	        print('not valid statistic, pelase try md or mr')

@@ -8,7 +8,7 @@ if __name__=='__main__':
     from variance_test import EMH
     from visuals import VRTVisuals
     
-    n = 500                         # number of time series to simulate
+    n = 100                         # number of time series to simulate
     T = 1000                        # number of steps
     r0 = 1.0                        # Initial short term rate
     
