@@ -3,6 +3,8 @@ if __name__=='__main__':
     import numpy as np
     import time
     from statistics import mean
+    import scipy.stats as stats
+    import pylab
     
     from price_paths import PricePaths
     from variance_test import EMH
@@ -62,10 +64,14 @@ if __name__=='__main__':
         p_values.append(_p)
         
     end_vrt = time.time()
-    print(f"It took {end_vrt - start_vrt} seconds to calculate the statistics for {n} synthetic paths")
+    print(f"It took {end_vrt - start_vrt} seconds to calculate the statistics for {all_proc.shape[1]} synthetic paths")
     
     # check the cetral measures for the z-values
     print(f"The mean values for the p-values is {mean(p_values)}")
     
     vrt_visuals.densities(dist_values, z_values)
+    
+    stats.probplot(z_values, dist='norm', plot=pylab);
+    pylab.show()
+    
     
