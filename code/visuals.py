@@ -1,16 +1,11 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 sns.set_style('whitegrid')
 
 from variance_test import EMH
 from price_paths import PricePaths
 
 class VRTVisuals(object):
-
-	# -----------------------------------
-	# Helper functions
-	# -----------------------------------	
 
 	def densities(self, ref_stats, z_stats):
 		"""
@@ -28,6 +23,7 @@ class VRTVisuals(object):
 		title_text = "Comparison of densities of a Normal Distribuited variable(red)\nagainst the Z* scores computed for the analyzed series of log prices"
 		plt.title(title_text)
 		plt.show()
+
 
 	def stat_plot(self, process:str='brownian', q_range:list =[5, 10], 
                    total_samples:int =500, initial_price:float=1.0, 
@@ -98,4 +94,4 @@ class VRTVisuals(object):
 
 	    plt.show()
 	    
-	    return 
+	    return
