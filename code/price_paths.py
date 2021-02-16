@@ -75,15 +75,15 @@ class PricePaths(object):
 	# Vasicek Interest Rate Model
 	# -------------------------------------------
     
-    def vas_rates(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False, type_:str='vas'):
+    def vas_rates(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False):
         
         ou_rates = self.__zeros()
         if self.n > 1:
             for i in range(self.n):
-                ou_rates[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+                ou_rates[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol)
         
         else:
-            ou_rates = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+            ou_rates = self.__vas_returns(mu, sigma, lambda_, sto_vol)
         
         return ou_rates
     
@@ -122,20 +122,35 @@ class PricePaths(object):
 	# Ornstein–Uhlenbeck Process (Mean reverting)
 	# -------------------------------------------
     
-    def ou_prices(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False, type_:str='ou'):
+    def ou_prices(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False):
         ou_prices = self.__zeros()
         if self.n > 1:
             for i in range(self.n):
-                ou_prices[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+                ou_prices[:, i] = self.__ou_returns(mu, sigma, lambda_, sto_vol)
         
         else:
-            ou_prices = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+            ou_prices = self.__ou_returns(mu, sigma, lambda_, sto_vol)
         
         return ou_prices
 
 	# -------------------------------------------
 	# Helper methods
 	# -------------------------------------------
+    
+    # Ornstein–Uhlenbeck Process (Mean reverting)
+    
+    def __ou_discrete(self, mu:float, sigma:float, lambda_:float, st:float, vol:float):
+        return np.exp(-lambda_*self.h)*st + (1-np.exp(-lambda_*self.h))*mu + sigma*( (1-np.exp(-2*lambda_*self.h)) / (2*lambda_)) * vol
+    
+    def __ou_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float):
+        volatility = self.__random_disturbance(sto_vol, rd_mu=mu, rd_sigma=sigma)
+        ou_rets = np.zeros(self.T)
+        ou_rets[0] = self.s0
+        
+        for t in range(1, self.T):
+            ou_rets[t] = ou_rets[t] + self.__ou_discrete(mu=mu, sigma=sigma, lambda_=lambda_, st=ou_rets[t-1], vol=volatility[t])
+        
+        return ou_rets      
     
     # Heston Stochastic Volatility Process
     
@@ -195,26 +210,17 @@ class PricePaths(object):
     
     # Vasicek Interest Rate Model and Ornstein–Uhlenbeck Process - Mean reverting
     
-    def __vas_discrete(self, mu:float, sigma:float, lambda_:float, rt:float, vol:float, type_:str):
+    def __vas_discrete(self, mu:float, sigma:float, lambda_:float, rt:float, vol:float):
         
-        if type_ == 'vas':
-            return lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol
-        elif type_ == 'ou':
-            return ( lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol ) * 100
+        return lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol
     
-    def __vas_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float, type_:str):
+    def __vas_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float):
         volatility = self.__random_disturbance(sto_vol, rd_mu=mu, rd_sigma=sigma)
         vas_rets = np.zeros((self.T))
-        
-        if type_ == 'vas':
-            vas_rets[0] = self.r0
-        elif type_ == 'ou':
-            vas_rets[0] = self.s0
-        else:
-            raise ValueError('vas, ou are the valid options.')
+        vas_rets[0] = self.r0
         
         for t in range(1, self.T):
-            vas_rets[t] = vas_rets[t-1] + self.__vas_discrete(mu=mu, sigma=sigma, lambda_=lambda_, rt=vas_rets[t-1], vol=volatility[t], type_=type_)
+            vas_rets[t] = vas_rets[t-1] + self.__vas_discrete(mu=mu, sigma=sigma, lambda_=lambda_, rt=vas_rets[t-1], vol=volatility[t])
             
         return vas_rets
         
