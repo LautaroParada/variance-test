@@ -195,9 +195,12 @@ class PricePaths(object):
     
     # Vasicek Interest Rate Model and Ornstein–Uhlenbeck Process - Mean reverting
     
-    def __vas_discrete(self, mu:float, sigma:float, lambda_:float, rt:float, vol:float):
+    def __vas_discrete(self, mu:float, sigma:float, lambda_:float, rt:float, vol:float, type_:str):
         
-        return lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol
+        if type_ == 'vas':
+            return lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol
+        elif type_ == 'ou':
+            return ( lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol ) * 100
     
     def __vas_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float, type_:str):
         volatility = self.__random_disturbance(sto_vol, rd_mu=mu, rd_sigma=sigma)
@@ -211,7 +214,7 @@ class PricePaths(object):
             raise ValueError('vas, ou are the valid options.')
         
         for t in range(1, self.T):
-            vas_rets[t] = vas_rets[t-1] + self.__vas_discrete(mu=mu, sigma=sigma, lambda_=lambda_, rt=vas_rets[t-1], vol=volatility[t])
+            vas_rets[t] = vas_rets[t-1] + self.__vas_discrete(mu=mu, sigma=sigma, lambda_=lambda_, rt=vas_rets[t-1], vol=volatility[t], type_=type_)
             
         return vas_rets
         
