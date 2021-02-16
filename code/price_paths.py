@@ -75,15 +75,15 @@ class PricePaths(object):
 	# Vasicek Interest Rate Model
 	# -------------------------------------------
     
-    def vas_rates(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False):
+    def vas_rates(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False, type_:str='vas'):
         
         ou_rates = self.__zeros()
         if self.n > 1:
             for i in range(self.n):
-                ou_rates[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol)
+                ou_rates[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
         
         else:
-            ou_rates = self.__vas_returns(mu, sigma, lambda_, sto_vol)
+            ou_rates = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
         
         return ou_rates
     
@@ -117,6 +117,21 @@ class PricePaths(object):
             hes_prices = self.__heston_returns(rf, k, theta, sigma, sto_vol)
             
         return hes_prices
+    
+    # -------------------------------------------
+	# Ornstein–Uhlenbeck Process (Mean reverting)
+	# -------------------------------------------
+    
+    def ou_prices(self, mu:float, sigma:float, lambda_:float, sto_vol:bool=False, type_:str='ou'):
+        ou_prices = self.__zeros()
+        if self.n > 1:
+            for i in range(self.n):
+                ou_prices[:, i] = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+        
+        else:
+            ou_prices = self.__vas_returns(mu, sigma, lambda_, sto_vol, type_)
+        
+        return ou_prices
 
 	# -------------------------------------------
 	# Helper methods
@@ -178,16 +193,22 @@ class PricePaths(object):
             
         return cir_ret
     
-    # Vasicek Interest Rate Model
+    # Vasicek Interest Rate Model and Ornstein–Uhlenbeck Process - Mean reverting
     
     def __vas_discrete(self, mu:float, sigma:float, lambda_:float, rt:float, vol:float):
         
         return lambda_ * (mu-rt) * self.h + sigma * np.sqrt(self.h) * vol
     
-    def __vas_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float):
+    def __vas_returns(self, mu:float, sigma:float, lambda_:float, sto_vol:float, type_:str):
         volatility = self.__random_disturbance(sto_vol, rd_mu=mu, rd_sigma=sigma)
         vas_rets = np.zeros((self.T))
-        vas_rets[0] = self.r0
+        
+        if type_ == 'vas':
+            vas_rets[0] = self.r0
+        elif type_ == 'ou':
+            vas_rets[0] = self.s0
+        else:
+            raise ValueError('vas, ou are the valid options.')
         
         for t in range(1, self.T):
             vas_rets[t] = vas_rets[t-1] + self.__vas_discrete(mu=mu, sigma=sigma, lambda_=lambda_, rt=vas_rets[t-1], vol=volatility[t])
