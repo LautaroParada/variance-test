@@ -148,7 +148,7 @@ class PricePaths(object):
         ou_rets[0] = self.s0
         
         for t in range(1, self.T):
-            ou_rets[t] = ou_rets[t] + self.__ou_discrete(mu=mu, sigma=sigma, lambda_=lambda_, st=ou_rets[t-1], vol=volatility[t])
+            ou_rets[t] = ou_rets[t] + self.__ou_discrete(mu=mu*100, sigma=sigma*100, lambda_=lambda_, st=ou_rets[t-1], vol=volatility[t])
         
         return ou_rets      
     
