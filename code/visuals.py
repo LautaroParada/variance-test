@@ -42,7 +42,7 @@ class VRTVisuals(object):
 	    elif process == 'merton':
 	    	_simulator = sims.merton_prices
 	    else:
-	    	print(f'Your option is {process}. Please select one of these: brownian, gbm, merton, heston, vas or cir')
+	    	print(f'Your option is {process}. Please select one of these: brownian, gbm, merton')
 	    	return None
 
 	    # error handling 

@@ -17,7 +17,7 @@ class PricePaths(object):
 	# The Brownian Motion Stochastic Process (Wiener Process)
 	# -------------------------------------------
     
-    def brownian_prices(self, mu:float, sigma:float, sto_vol:bool=False):
+    def brownian_prices(self, mu:float, sigma:float):
         
         # preallocate the data
         bro_prices = self.__zeros()
@@ -26,10 +26,10 @@ class PricePaths(object):
         if self.n > 1:
             for i in range(self.n):
                 # simulate n price paths
-                bro_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol)
+                bro_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol=True)
         else:
             # case for only 1 simulation
-            bro_prices = self.__brownian_returns(mu, sigma, sto_vol)
+            bro_prices = self.__brownian_returns(mu, sigma, sto_vol=True)
             
         return bro_prices
     
@@ -37,7 +37,7 @@ class PricePaths(object):
 	# Geometric Brownian motion
 	# -------------------------------------------
     
-    def gbm_prices(self, mu:float, sigma:float, sto_vol:bool=True):
+    def gbm_prices(self, mu:float, sigma:float):
         # preallocate the data
         gbm_prices = self.__zeros()
 
@@ -45,10 +45,10 @@ class PricePaths(object):
         if self.n > 1:
             for i in range(self.n):
                 # simulate n price paths
-                gbm_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol)
+                gbm_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol=False)
         else:
             # case for only 1 simulation
-            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol)
+            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol=False)
 
         return gbm_prices
     
@@ -259,6 +259,7 @@ class PricePaths(object):
         # preallocate the volatility
         volatility = self.__random_disturbance(sto_vol, rd_mu=mu, rd_sigma=sigma)
         bro_returns = np.zeros((self.T))
+        # initial condition X(0) = X_0
         bro_returns[0] = self.s0
         for t in range(1, self.T):
             bro_returns[t] = bro_returns[t-1] + \

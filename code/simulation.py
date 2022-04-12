@@ -19,12 +19,12 @@ if __name__=='__main__':
     vrt_visuals = VRTVisuals()
     
     # General parameters
-    mu = 0.05                       # Long term mean return
-    sigma = 0.05                    # Volatility
+    mu = 0.09                       # Long term mean return
+    sigma = 0.18                    # Volatility
     
     # Particular parameters
     lam = 500                       # Intensity of the Jump (Merton process)
-    rf = 0.0                        # Risk free rate (Heston)
+    rf = 0.02                        # Risk free rate (Heston)
     k = 0.5                         # (Heston)
     theta = 1.0                     # (Heston)
     
