@@ -14,10 +14,10 @@ class PricePaths(object):
         
 
 	# -------------------------------------------
-	# The Brownian Motion Stochastic Process (Wiener Process)
+	# Geometric Brownian motion
 	# -------------------------------------------
     
-    def brownian_prices(self, mu:float, sigma:float):
+    def gbm_prices(self, mu:float, sigma:float):
         
         # preallocate the data
         bro_prices = self.__zeros()
@@ -26,37 +26,46 @@ class PricePaths(object):
         if self.n > 1:
             for i in range(self.n):
                 # simulate n price paths
-                bro_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol=True)
+                bro_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol=False)
         else:
             # case for only 1 simulation
-            bro_prices = self.__brownian_returns(mu, sigma, sto_vol=True)
+            bro_prices = self.__brownian_returns(mu, sigma, sto_vol=False)
             
         return bro_prices
-    
-	# -------------------------------------------
-	# Geometric Brownian motion
-	# -------------------------------------------
-    
-    def gbm_prices(self, mu:float, sigma:float):
-        # preallocate the data
-        gbm_prices = self.__zeros()
-
-        # check the size of the output matrix
-        if self.n > 1:
-            for i in range(self.n):
-                # simulate n price paths
-                gbm_prices[:, i] = self.__brownian_returns(mu, sigma, sto_vol=False)
-        else:
-            # case for only 1 simulation
-            gbm_prices = self.__brownian_returns(mu, sigma, sto_vol=False)
-
-        return gbm_prices
     
 	# -------------------------------------------
 	# Merton Jump Diffusion Stochastic Process
 	# -------------------------------------------
     
-    def merton_prices(self, mu:float, sigma:float, lambda_:int, sto_vol:bool=False):
+    def merton_prices(self, mu:float, sigma:float, lambda_:int):
+        """
+        This model superimposes a jump component on a diffusion component.
+        The diffusion component is the familiar geometric Brownian motion.
+        The jump component is composed of lognormal jumps driven by a Poisson
+        process.
+            - It models the sudden changes in the stock price because of the 
+            arrival of important new information.
+            - The lognormal jumps, and the Poisson process are assumed to
+            be independent.
+        
+        The jump event is governed by a compound Poisson process qt with 
+        intensity λ, where k denotes the magnitude of the random jump.
+
+        Parameters
+        ----------
+        mu : float
+            mean returns for the instrument (first moment).
+        sigma : float
+            volatility of the instrument (second moment).
+        lambda_ : int
+            intensity/frequency of the jump.
+
+        Returns
+        -------
+        mert_prices : numy array
+            prices with at least a jump.
+
+        """
         # preallocate the data
         mert_prices = self.__zeros()
         
@@ -64,10 +73,10 @@ class PricePaths(object):
         if self.n > 1:
             for i in range(self.n):
                 # simulate n price paths
-                mert_prices[:, i] = self.__merton_returns(mu, sigma, lambda_, sto_vol)
+                mert_prices[:, i] = self.__merton_returns(mu, sigma, lambda_, sto_vol=False)
         else:
             # case for only 1 simulation
-            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol)
+            mert_prices = self.__merton_returns(mu, sigma, lambda_, sto_vol=False)
         
         return mert_prices
     
@@ -102,7 +111,7 @@ class PricePaths(object):
         
         return cir_rates_
     
-    # -------------------------------------------
+   # -------------------------------------------
 	# Heston Stochastic Volatility Process
 	# -------------------------------------------
     
@@ -118,7 +127,7 @@ class PricePaths(object):
             
         return hes_prices
     
-    # -------------------------------------------
+   # -------------------------------------------
 	# Ornstein–Uhlenbeck Process (Mean reverting)
 	# -------------------------------------------
     
@@ -230,18 +239,17 @@ class PricePaths(object):
         t = 0
         jumps = np.zeros((self.T, 1))
         lambda__ = lambda_ / self.T
-        small_lambda = -(1.0/lambda__)
-        pd = np.random.poisson(lam=lambda__, size=(self.T))
+        small_lambda = -(1.0/lambda__) # k or magnitude of the jump
+        pd_ = np.random.poisson(lam=lambda__, size=(self.T))
         
         # applying the psudo-code of the algorithm
         for i in range(self.T):
             t += small_lambda * np.log(np.random.uniform())
-            if t > self.T:
-                jumps[i:] = ( (np.mean(pd) + np.std(pd)) * np.random.uniform() ) * np.random.choice([-1, 1])
+            if t >= self.T:
+                jumps[i:] = ( (np.mean(pd_) + np.std(pd_)) * np.random.uniform() ) * np.random.choice([-1, 1])
                 # the t parameter is restituted to the original value
                 # for several jumps in the future
-                t = small_lambda
-                break
+                t = 0
                 
         return jumps.reshape(-1, 1)
                 
@@ -273,11 +281,10 @@ class PricePaths(object):
     
     def __random_disturbance(self, sto_vol:bool, rd_mu:float, rd_sigma:float):
         
+        # negative volatility doesnt make sense
         if not sto_vol:
             return np.random.normal(size=(self.T, 1))
         else:
-            # error handling for scale < 0, because negative volatilities 
-            # doesnt makes sense.
             return np.random.normal(loc=rd_mu * self.h,
                                     scale=rd_sigma * halfnorm.rvs(1) * np.sqrt(self.h),
                                     size=(self.T, 1)) * 100
