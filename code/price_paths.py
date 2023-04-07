@@ -146,7 +146,39 @@ class PricePaths(object):
 	# Vasicek Interest Rate Model
 	# -------------------------------------------
     
+    def vas_rates(self, kappa, theta, sigma):
+        """
+        Genera una simulación de tasas de interés siguiendo un proceso de Vasicek.
 
+        Parámetros:
+        kappa (float): Velocidad de reversión a la media.
+        theta (float): Nivel de reversión a la media.
+        sigma (float): Volatilidad de la tasa de interés.
+
+        Retorna:
+        numpy.ndarray: Array 1D de tasas de interés simuladas.
+        """
+
+        # Validación de parámetros
+        if not all(isinstance(param, (int, float)) for param in (kappa, theta, sigma)):
+            raise ValueError("Los parámetros kappa, theta y sigma deben ser números")
+
+        # Inicialización de las tasas de interés con la tasa inicial
+        rates = np.zeros(self.n + 1)
+        rates[0] = self.s0
+
+        # Generación de incrementos brownianos
+        brownian_increments = np.random.normal(
+            loc=0,
+            scale=np.sqrt(self.dt),
+            size=self.n
+        )
+
+        # Cálculo de tasas de interés utilizando el proceso de Vasicek
+        for t in range(1, self.n + 1):
+            rates[t] = rates[t - 1] + kappa * (theta - rates[t - 1]) * self.dt + sigma * brownian_increments[t - 1]
+
+        return rates
     
 	# -------------------------------------------
 	# Cox Ingersoll Ross (CIR) stochastic proces - RATES
