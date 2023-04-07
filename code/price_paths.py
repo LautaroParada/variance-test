@@ -225,7 +225,48 @@ class PricePaths(object):
 	# Heston Stochastic Volatility Process
 	# -------------------------------------------
     
+    def heston_prices(self, kappa, theta, sigma, rho, v0):
+        """
+        Genera una simulación de precios de activos siguiendo el modelo de Heston.
 
+        Parámetros:
+        kappa (float): Velocidad de reversión a la media de la varianza.
+        theta (float): Nivel de reversión a la media de la varianza.
+        sigma (float): Volatilidad de la varianza.
+        rho (float): Correlación entre el movimiento del activo y su varianza.
+        v0 (float): Valor inicial de la varianza.
+
+        Retorna:
+        numpy.ndarray: Array 1D de precios de activos simulados.
+        """
+
+        # Validación de parámetros
+        if not all(isinstance(param, (int, float)) for param in (kappa, theta, sigma, rho, v0)):
+            raise ValueError("Los parámetros kappa, theta, sigma, rho y v0 deben ser números")
+
+        # Inicialización de los precios de activos y varianzas
+        prices = np.zeros(self.n + 1)
+        prices[0] = self.s0
+        variances = np.zeros(self.n + 1)
+        variances[0] = v0
+
+        # Generación de incrementos brownianos correlacionados
+        normal_sample = np.random.multivariate_normal(
+            mean=[0, 0],
+            cov=[[self.dt, rho * self.dt], [rho * self.dt, self.dt]],
+            size=self.n
+        )
+        brownian_increments_s = normal_sample[:, 0]
+        brownian_increments_v = normal_sample[:, 1]
+
+        # Cálculo de precios y varianzas utilizando el modelo de Heston
+        for t in range(1, self.n + 1):
+            variances[t] = variances[t - 1] + kappa * (theta - variances[t - 1]) * self.dt + sigma * np.sqrt(variances[t - 1]) * brownian_increments_v[t - 1]
+            variances[t] = max(variances[t], 0)  # Garantizar que la varianza no sea negativa
+
+            prices[t] = prices[t - 1] * np.exp((self.r - 0.5 * variances[t - 1]) * self.dt + np.sqrt(variances[t - 1]) * brownian_increments_s[t - 1])
+
+        return prices
     
     # -------------------------------------------
 	# Ornstein–Uhlenbeck Process (Mean reverting)
