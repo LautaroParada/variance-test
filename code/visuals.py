@@ -5,93 +5,97 @@ sns.set_style('whitegrid')
 from variance_test import EMH
 from price_paths import PricePaths
 
-class VRTVisuals(object):
 
-	def densities(self, ref_stats, z_stats):
-		"""
-		plot the densities for a series of data
+class VRTVisuals:
 
-		These ref_stats (normal distribuition) values are 
-		colored red, because represents the light that 'stop' 
-		the rejection of the null hypothesis. Analog representation
-		is made for the z scores from the test.
-		"""
-		# plot the normal distribuition values
-		sns.kdeplot(ref_stats, shade=True, color="r")
-		# plot the values for the statistic
-		sns.kdeplot(z_stats, shade=True, color="g")
-		title_text = "Comparison of densities of a Normal Distribuited variable(red)\nagainst the Z* scores computed for the analyzed series of log prices"
-		plt.title(title_text)
-		plt.show()
+    def graficar_densidades(self, ref_stats, z_stats):
+        """
+        Grafica las densidades para una serie de datos
 
+        Los valores ref_stats (distribución normal) se muestran en rojo, ya que representan la luz que 'detiene'
+        el rechazo de la hipótesis nula. Se hace una representación análoga para los puntajes z del test.
+        """
+        # Graficar los valores de la distribución normal
+        sns.kdeplot(ref_stats, shade=True, color="r")
+        # Graficar los valores de la estadística
+        sns.kdeplot(z_stats, shade=True, color="g")
+        titulo = "Comparación de densidades de una variable con distribución normal (rojo)\ncontra los puntajes Z* calculados para la serie de precios logarítmicos analizada"
+        plt.title(titulo)
+        plt.show()
 
-	def stat_plot(self, process:str='brownian', q_range:list =[5, 10], 
-                   total_samples:int =500, initial_price:float=1.0, 
-                   stat_type:str ='mr', **kwargs):
-	    """
-	    Generate the plots for the DIFFERENCES USING THE OVERLAPPING SAMPLES ESTIMATOR
+    def graficar_estadisticas(self, proceso: str = 'brownian', rango_q: list = [5, 10],
+                               total_muestras: int = 500, precio_inicial: float = 1.0,
+                               tipo_estadistica: str = 'mr', **kwargs):
+        """
+        Genera las gráficas para las DIFERENCIAS UTILIZANDO EL ESTIMADOR DE MUESTRAS SUPERPUESTAS
 
-	    """
-	    # creating the objecto for the price paths
-	    sims = PricePaths(n=1, T=total_samples*2, s0=initial_price)
+        """
+        # Crear el objeto para las trayectorias de precios
+        sims = PricePaths(n=1, T=total_muestras * 2, s0=precio_inicial)
 
-	    if process == 'brownian':
-	    	_simulator = sims.brownian_prices
-	    elif process == 'gmb':
-	    	_simulator = sims.gbm_prices
-	    elif process == 'merton':
-	    	_simulator = sims.merton_prices
-	    else:
-	    	print(f'Your option is {process}. Please select one of these: brownian, gbm, merton')
-	    	return None
+        # Diccionario para asignar el simulador
+        simuladores = {
+            'brownian': sims.brownian_prices,
+            'gmb': sims.gbm_prices,
+            'merton': sims.merton_prices
+        }
 
-	    # error handling 
-	    if len(q_range) != 2:
-	        print('Please select at most 2 ranges to analyze, e.g., [3,6]')
-	        return None
-	    
-	    # setting the desired statistic
-	    if  stat_type == 'md':
-	        stat = EMH()._EMH__md
-	        statName = stat_type.capitalize() # capitalize the name
-	    elif stat_type == 'mr':
-	        stat = EMH()._EMH__mr
-	        statName = stat_type.capitalize() # capitalize the name
-	    else:
-	        print('not valid statistic, pelase try md or mr')
-	        return None
-	    
-	    # generating the statistics for values without Stochastic Volatility
-	    _statsQ1 = [stat(X=_simulator(**kwargs), q=q_range[0]) for sample in range(q_range[0], total_samples)]
-	    _statsQ2 = [stat(X=_simulator(**kwargs), q=q_range[1]) for sample in range(q_range[1], total_samples)]
-	    
-	    # generating the statistics for values with Stochastic Volatility
-	    _statsVolQ1 = [stat(X=_simulator(**kwargs), q=q_range[0],
-	                       unbiased=False) for sample in range(q_range[0], total_samples)]
-	    _statsVolQ2 = [stat(X=_simulator(**kwargs), q=q_range[1],
-	                       unbiased=False) for sample in range(q_range[1], total_samples)]
-	    
-	    # Creating the plots        
-	    fig, axes = plt.subplots(2, 2, figsize=(15,15))
-	    fig.suptitle(f' {statName} values for {process.capitalize()} prices paths', fontsize=16)
-	    # values of MD without Stochastic volatility
-	    axes[0,0].plot(_statsQ1, marker='o', linestyle='None');
-	    axes[0,0].set_title(f'Values of {statName} without Stochastic volatility')
-	    axes[0,0].set_ylabel(f'Values of Md(q={q_range[0]})')
-	    
-	    axes[0,1].plot(_statsQ2, marker='o', linestyle='None');
-	    axes[0,1].set_title(f'Values of {statName} without Stochastic Volatility')
-	    axes[0,1].set_ylabel(f'Values of Md(q={q_range[1]})')
-	    
-	    # values of MD with Stochastic volatility
-	    axes[1,0].plot(_statsVolQ1, marker='o', linestyle='None');
-	    axes[1,0].set_title(f'Values of {statName} with Stochastic volatility')
-	    axes[1,0].set_ylabel(f'Values of Md(q={q_range[0]})')
-	    
-	    axes[1,1].plot(_statsVolQ2, marker='o', linestyle='None')
-	    axes[1,1].set_title(f'Values of {statName} with Stochastic volatility')
-	    axes[1,1].set_ylabel(f'Values of Md(q={q_range[1]})')
+        # Obtener el simulador correspondiente al proceso
+        simulador = simuladores.get(proceso)
+        if not simulador:
+            print(f'Tu opción es {proceso}. Por favor, selecciona una de estas: brownian, gbm, merton')
+            return None
 
-	    plt.show()
-	    
-	    return
+        # Manejo de errores
+        if len(rango_q) != 2:
+            print('Por favor, selecciona al menos 2 rangos para analizar, por ejemplo, [3,6]')
+            return None
+
+        # Estableciendo la estadística deseada
+        estadisticas = {
+            'md': EMH()._EMH__md,
+            'mr': EMH()._EMH__mr
+        }
+
+        estadistica = estadisticas.get(tipo_estadistica)
+        if not estadistica:
+            print('Estadística no válida, por favor, intenta con md o mr')
+            return None
+
+        nombre_estadistica = tipo_estadistica.capitalize()
+
+        # Función interna para generar estadísticas
+        def generar_estadisticas(q, unbiased):
+            return [estadistica(X=simulador(**kwargs), q=q, unbiased=unbiased) for muestra in range(q, total_muestras)]
+
+        # Generando las estadísticas
+        statsQ1 = generar_estadisticas(rango_q[0], True)
+        statsQ2 = generar_estadisticas(rango_q[1], True)
+        statsVolQ1 = generar_estadisticas(rango_q[0], False)
+        statsVolQ2 = generar_estadisticas(rango_q[1], False)
+
+        # Creando las gráficas
+        fig, axes = plt.subplots(2, 2, figsize=(15, 15))
+        fig.suptitle(f'Valores de {nombre_estadistica} para las trayectorias de precios {proceso.capitalize()}', fontsize=16)
+
+        # Valores de MD sin Volatilidad Estocástica
+        axes[0, 0].plot(statsQ1, marker='o', linestyle='None')
+        axes[0, 0].set_title(f'Valores de {nombre_estadistica} sin Volatilidad Estocástica')
+        axes[0, 0].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[0]})')
+
+        axes[0, 1].plot(statsQ2, marker='o', linestyle='None')
+        axes[0, 1].set_title(f'Valores de {nombre_estadistica} sin Volatilidad Estocástica')
+        axes[0, 1].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[1]})')
+
+        # Valores de MD con Volatilidad Estocástica
+        axes[1, 0].plot(statsVolQ1, marker='o', linestyle='None')
+        axes[1, 0].set_title(f'Valores de {nombre_estadistica} con Volatilidad Estocástica')
+        axes[1, 0].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[0]})')
+
+        axes[1, 1].plot(statsVolQ2, marker='o', linestyle='None')
+        axes[1, 1].set_title(f'Valores de {nombre_estadistica} con Volatilidad Estocástica')
+        axes[1, 1].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[1]})')
+
+        plt.show()
+
+        return
