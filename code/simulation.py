@@ -10,48 +10,46 @@ if __name__=='__main__':
     from variance_test import EMH
     from visuals import VRTVisuals
     
-    n = 100                         # number of time series to simulate
-    T = 1000                        # number of steps
-    r0 = 1.0                        # Initial short term rate
+    n = 10                         # number of time series to simulate
+    T = 100                         # number of steps
+    s0 = 100.0                        # Initial short term rate
     
-    sim = PricePaths(n, T, r0)      # Initialization of the simulation class
+    sim = PricePaths(n, T, s0)      # Initialization of the simulation class
     emh = EMH()                     # Initialization of the test class
     vrt_visuals = VRTVisuals()
     
     # General parameters
     mu = 0.09                       # Long term mean return
-    sigma = 0.18                    # Volatility
+    sigma = 0.1                    # Volatility
     
     # Particular parameters
-    lam = 500                       # Intensity of the Jump (Merton process)
-    rf = 0.02                        # Risk free rate (Heston)
-    k = 0.5                         # (Heston)
-    theta = 1.0                     # (Heston)
+    lam = T / 2                     # Intensity of the Jump (Merton process)
+    k = 0.1                         # (Heston)
+    theta = 0.06                    # (Heston)
     
     # generate synthetic data
     start_fake_data = time.time()
     
     # Simulate the random prices - Prices paths
-    bro = sim.brownian_prices(mu, sigma)            # Brownian model
     gbm = sim.gbm_prices(mu, sigma)                 # Geometric Brownian model 
     merton = sim.merton_prices(mu, sigma, lam)      # Merton model
-    hes = sim.heston_prices(rf=rf,                  # Heston model
+    hes = sim.heston_prices(mu=mu,                  # Heston model
                             k=k, 
                             theta=theta, 
                             sigma=sigma)
     
-    all_proc = np.hstack((bro, gbm, merton, hes))
+    all_proc = np.hstack((gbm, merton, hes))
     
     # Measuring time
     end_fake_data = time.time()
     print(f"It took {round(end_fake_data - start_fake_data, 3)} seconds to simulate {all_proc.shape[1]} time series")
     
-    vrt_visuals.stat_plot(mu=mu, sigma=sigma)
+    #vrt_visuals.stat_plot(mu=mu, sigma=sigma)
     
     q = 5
     print('Market simulated prices')
     # generate the asymtotic values - to compare the stadistics against the real
-    dist_values = np.random.normal(size=(n))
+    dist_values = np.random.normal(loc=0, scale=1, size=n)
     # calculate the statistics
     start_vrt = time.time()
     
