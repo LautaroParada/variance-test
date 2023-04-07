@@ -94,7 +94,53 @@ class PricePaths(object):
 	# Merton Jump Diffusion Stochastic Process
 	# -------------------------------------------
     
+    def merton_prices(self, mu, sigma, lambda_jump, mu_jump, sigma_jump):
+        """
+        Genera una simulación de precios siguiendo un proceso de salto-difusión de Merton.
 
+        Parámetros:
+        mu (float): Tasa de rendimiento esperado de la acción.
+        sigma (float): Volatilidad de la acción.
+        lambda_jump (float): Intensidad de saltos.
+        mu_jump (float): Media de la distribución log-normal de saltos.
+        sigma_jump (float): Desviación estándar de la distribución log-normal de saltos.
+
+        Retorna:
+        numpy.ndarray: Array 1D de precios simulados.
+        """
+
+        # Validación de parámetros
+        if not all(isinstance(param, (int, float)) for param in (mu, sigma, lambda_jump, mu_jump, sigma_jump)):
+            raise ValueError("Los parámetros mu, sigma, lambda_jump, mu_jump y sigma_jump deben ser números")
+
+        # Inicialización de los precios con el precio inicial
+        prices = np.zeros(self.n + 1)
+        prices[0] = self.s0
+
+        # Generación de incrementos brownianos
+        brownian_increments = np.random.normal(
+            loc=0,
+            scale=np.sqrt(self.dt),
+            size=self.n
+        )
+
+        # Generación de saltos
+        num_jumps = np.random.poisson(
+            lam=lambda_jump * self.dt,
+            size=self.n
+        )
+
+        jump_sizes = np.random.normal(
+            loc=mu_jump,
+            scale=sigma_jump,
+            size=self.n
+        )
+
+        # Cálculo de precios utilizando el proceso de salto-difusión de Merton
+        for t in range(1, self.n + 1):
+            prices[t] = prices[t - 1] * np.exp((mu - 0.5 * sigma**2) * self.dt + sigma * brownian_increments[t - 1]) * np.exp(num_jumps[t - 1] * (np.exp(jump_sizes[t - 1]) - 1))
+
+        return prices
     
 	# -------------------------------------------
 	# Vasicek Interest Rate Model
