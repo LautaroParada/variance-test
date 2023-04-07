@@ -272,3 +272,31 @@ class PricePaths(object):
 	# Ornstein–Uhlenbeck Process (Mean reverting)
 	# -------------------------------------------
     
+    def ou_prices(self, alpha, mu):
+        """
+        Genera una simulación de precios de activos siguiendo el modelo de Ornstein-Uhlenbeck.
+
+        Parámetros:
+        alpha (float): Velocidad de reversión a la media.
+        mu (float): Nivel de reversión a la media.
+
+        Retorna:
+        numpy.ndarray: Array 1D de precios de activos simulados.
+        """
+
+        # Validación de parámetros
+        if not all(isinstance(param, (int, float)) for param in (alpha, mu)):
+            raise ValueError("Los parámetros alpha y mu deben ser números")
+
+        # Inicialización de los precios de activos
+        prices = np.zeros(self.n + 1)
+        prices[0] = self.s0
+
+        # Generación de incrementos brownianos
+        brownian_increments = np.random.normal(loc=0, scale=np.sqrt(self.dt), size=self.n)
+
+        # Cálculo de precios utilizando el modelo de Ornstein-Uhlenbeck
+        for t in range(1, self.n + 1):
+            prices[t] = prices[t - 1] + alpha * (mu - prices[t - 1]) * self.dt + brownian_increments[t - 1]
+
+        return prices
