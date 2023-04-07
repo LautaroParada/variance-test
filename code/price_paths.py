@@ -12,7 +12,7 @@ class PricePaths(object):
         self.T = T                      # number of observations to generate
         self.s0 = s0                    # initial price
         
-        self.h = self.n / self.T        # step to move in each step
+        self.dt = self.n / self.T       # step to move in each step
         self.r0 = self.s0 / 100         # Initial rate, based on the price
         
 
