@@ -5,25 +5,23 @@ sns.set_style('whitegrid')
 from variance_test import EMH
 from price_paths import PricePaths
 
-class VRTVisuals(object):
 
-	def densities(self, ref_stats, z_stats):
-		"""
-		plot the densities for a series of data
+class VRTVisuals:
 
-		These ref_stats (normal distribuition) values are 
-		colored red, because represents the light that 'stop' 
-		the rejection of the null hypothesis. Analog representation
-		is made for the z scores from the test.
-		"""
-		# plot the normal distribuition values
-		sns.kdeplot(ref_stats, shade=True, color="r")
-		# plot the values for the statistic
-		sns.kdeplot(z_stats, shade=True, color="g")
-		title_text = "Comparison of densities of a Normal Distribuited variable(red)\nagainst the Z* scores computed for the analyzed series of log prices"
-		plt.title(title_text)
-		plt.show()
+    def graficar_densidades(self, ref_stats, z_stats):
+        """
+        Grafica las densidades para una serie de datos
 
+        Los valores ref_stats (distribución normal) se muestran en rojo, ya que representan la luz que 'detiene'
+        el rechazo de la hipótesis nula. Se hace una representación análoga para los puntajes z del test.
+        """
+        # Graficar los valores de la distribución normal
+        sns.kdeplot(ref_stats, shade=True, color="r")
+        # Graficar los valores de la estadística
+        sns.kdeplot(z_stats, shade=True, color="g")
+        titulo = "Comparación de densidades de una variable con distribución normal (rojo)\ncontra los puntajes Z* calculados para la serie de precios logarítmicos analizada"
+        plt.title(titulo)
+        plt.show()
 
 	def stat_plot(self, process:str='brownian', q_range:list =[5, 10], 
                    total_samples:int =500, initial_price:float=1.0, 
