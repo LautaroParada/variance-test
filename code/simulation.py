@@ -10,9 +10,9 @@ if __name__=='__main__':
     from variance_test import EMH
     from visuals import VRTVisuals
     
-    n = 100                         # number of time series to simulate
+    n = 10                         # number of time series to simulate
     T = 100                         # number of steps
-    s0 = 1.0                        # Initial short term rate
+    s0 = 100.0                        # Initial short term rate
     
     sim = PricePaths(n, T, s0)      # Initialization of the simulation class
     emh = EMH()                     # Initialization of the test class
@@ -20,13 +20,12 @@ if __name__=='__main__':
     
     # General parameters
     mu = 0.09                       # Long term mean return
-    sigma = 0.18                    # Volatility
+    sigma = 0.1                    # Volatility
     
     # Particular parameters
     lam = T / 2                     # Intensity of the Jump (Merton process)
-    rf = 0.02                       # Risk free rate (Heston)
-    k = 0.5                         # (Heston)
-    theta = 1.0                     # (Heston)
+    k = 0.1                         # (Heston)
+    theta = 0.06                    # (Heston)
     
     # generate synthetic data
     start_fake_data = time.time()
@@ -34,7 +33,7 @@ if __name__=='__main__':
     # Simulate the random prices - Prices paths
     gbm = sim.gbm_prices(mu, sigma)                 # Geometric Brownian model 
     merton = sim.merton_prices(mu, sigma, lam)      # Merton model
-    hes = sim.heston_prices(rf=rf,                  # Heston model
+    hes = sim.heston_prices(mu=mu,                  # Heston model
                             k=k, 
                             theta=theta, 
                             sigma=sigma)

@@ -115,15 +115,15 @@ class PricePaths(object):
 	# Heston Stochastic Volatility Process
 	# -------------------------------------------
     
-    def heston_prices(self, rf:float, k:float, theta:float, sigma:float, sto_vol:bool=False):
+    def heston_prices(self, mu:float, k:float, theta:float, sigma:float):
         hes_prices = self.__zeros()
         
         if self.n > 1:
             for i in range(self.n):
-                hes_prices[:, i] = self.__heston_returns(rf, k, theta, sigma, sto_vol)
+                hes_prices[:, i] = self.__heston_returns(mu, k, theta, sigma)
                 
         else:
-            hes_prices = self.__heston_returns(rf, k, theta, sigma, sto_vol)
+            hes_prices = self.__heston_returns(mu, k, theta, sigma)
             
         return hes_prices
     
@@ -165,37 +165,36 @@ class PricePaths(object):
     
     def __heston_dis_vol(self, k:float, theta:float, vt:float, sigma:float, w2:float):
         # heston mean reverting volatility recurrence
-        return k * (theta - vt) * self.h + sigma * np.sqrt(np.abs(vt) * self.h) * w2
+        return k * (sigma - np.abs(vt)) * self.h + theta * np.sqrt(np.abs(vt) * self.h) * w2
     
-    def __heston_discrete(self, rf:float, st:float, V, w1):
+    def __heston_discrete(self, mu:float, st:float, V, w1):
         # Discrete form of the Heston model
-        return rf * st *self.h + np.sqrt(np.abs(V) * self.h) * st * w1
+        return mu * st * self.h + np.sqrt(np.abs(V)) * st * np.sqrt(self.h) * w1
     
-    def __heston_returns(self, rf:float, k:float, theta:float, sigma:float, sto_vol:bool):
+    def __heston_returns(self, mu:float, k:float, theta:float, sigma:float):
         
         # integrate a random correlation level
         corr_wn1, corr_wn2 = self.__corr_noise()
         
-        # integrating the mean reverting volatility
-        wn2 = self.__random_disturbance(sto_vol=sto_vol, rd_mu=0, rd_sigma=0)
+        # integrating the mean reverting volatility of two Wiener processes
         dw2 = np.zeros(self.T)
         dw2[0] = corr_wn2[0]
         
         for t in range(1, self.T):
-            dw2[t] = self.__heston_dis_vol(k=k, 
-                                           theta=theta, 
-                                           vt=corr_wn2[t], 
-                                           sigma=sigma, 
-                                           w2=wn2[t])
+            dw2[t] = corr_wn2[t-1] + self.__heston_dis_vol(k=k, 
+                                                       theta=theta, 
+                                                       vt=dw2[t-1], 
+                                                       sigma=sigma, 
+                                                       w2=corr_wn2[t])
             
         # creating the actual data for the process
         heston_ret = np.zeros(self.T)
         heston_ret[0] = self.s0
         
         for t in range(1, self.T):
-            heston_ret[t] = heston_ret[t-1] + self.__heston_discrete(rf=rf, 
+            heston_ret[t] = heston_ret[t-1] + self.__heston_discrete(mu=mu,
                                                                      st=heston_ret[t-1], 
-                                                                     V=dw2[t], 
+                                                                     V=dw2[t-1], 
                                                                      w1=corr_wn1[t])
             
         return heston_ret.ravel()
@@ -294,19 +293,15 @@ class PricePaths(object):
         return np.zeros((self.T, self.n))
     
     def __corr_noise(self):
+        #fuente https://lup.lub.lu.se/luur/download?func=downloadFile&recordOId=1436827&fileOId=1646914
         
         # generate two uncorrelated Brownian processes
         z1 = self.__random_disturbance(sto_vol=False, rd_mu=0, rd_sigma=1)
         z2 = self.__random_disturbance(sto_vol=False, rd_mu=0, rd_sigma=1)
         
-        # randomly create an absolute correlation
-        rho = np.random.uniform(low=0.5, high=1)
+        # randomly create a correlation coeficient
+        rho = np.random.uniform(low=0.5, high=0.7) * np.random.choice([-1, 1])
         
-        corr1 = np.sqrt( (1 + rho) / 2 )
-        corr2 = np.sqrt( (1 - rho) / 2 )
+        z_tV = ( rho * z1 ) + ( np.sqrt( 1 - rho**2 ) * z2 )
         
-        # correlating the brownian processes
-        dw1 = corr1 * z1 + corr2 * z2
-        dw2 = corr1 * z1 - corr2 * z2
-        
-        return dw1, dw2
+        return z1, z_tV
