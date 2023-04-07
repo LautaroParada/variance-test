@@ -1,16 +1,11 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 sns.set_style('whitegrid')
 
 from variance_test import EMH
 from price_paths import PricePaths
 
 class VRTVisuals(object):
-
-	# -----------------------------------
-	# Helper functions
-	# -----------------------------------	
 
 	def densities(self, ref_stats, z_stats):
 		"""
@@ -29,6 +24,7 @@ class VRTVisuals(object):
 		plt.title(title_text)
 		plt.show()
 
+
 	def stat_plot(self, process:str='brownian', q_range:list =[5, 10], 
                    total_samples:int =500, initial_price:float=1.0, 
                    stat_type:str ='mr', **kwargs):
@@ -46,7 +42,7 @@ class VRTVisuals(object):
 	    elif process == 'merton':
 	    	_simulator = sims.merton_prices
 	    else:
-	    	print(f'Your option is {process}. Please select one of these: brownian, gbm, merton, heston, vas or cir')
+	    	print(f'Your option is {process}. Please select one of these: brownian, gbm, merton')
 	    	return None
 
 	    # error handling 
@@ -56,10 +52,10 @@ class VRTVisuals(object):
 	    
 	    # setting the desired statistic
 	    if  stat_type == 'md':
-	        stat = EMH()._md
+	        stat = EMH()._EMH__md
 	        statName = stat_type.capitalize() # capitalize the name
 	    elif stat_type == 'mr':
-	        stat = EMH()._mr
+	        stat = EMH()._EMH__mr
 	        statName = stat_type.capitalize() # capitalize the name
 	    else:
 	        print('not valid statistic, pelase try md or mr')
@@ -98,4 +94,4 @@ class VRTVisuals(object):
 
 	    plt.show()
 	    
-	    return 
+	    return
