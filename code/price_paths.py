@@ -1,17 +1,23 @@
 import numpy as np
 from scipy.stats import halfnorm
 
-class PricePaths(object):
+class PricePaths:
     
-    def __init__(self, n:int, T:int, s0:float):
-        
-        self.n = n                      # number of paths to generate
-        self.T = T                      # number of observations to generate
-        self.s0 = s0                    # initial price
-        
-        self.h = self.n / self.T        # step to move in each step
-        self.r0 = self.s0 / 100         # Initial rate, based on the price
-        
+    def __init__(self, num_simulaciones: int, num_observaciones: int, precio_inicial: float):
+        """
+        Inicializa la clase PricePaths.
+
+        :param num_simulaciones: Número de simulaciones a realizar.
+        :param num_observaciones: Número de observaciones en cada simulación.
+        :param precio_inicial: Precio inicial de la simulación.
+        """
+
+        self.num_simulaciones = num_simulaciones
+        self.num_observaciones = num_observaciones
+        self.precio_inicial = precio_inicial
+
+        self.step = self.num_simulaciones / self.num_observaciones # El paso a mover en cada paso
+        self.rate0 = self.precio_inicial / 100 # La tasa inicial, basada en el precio
 
     # -------------------------------------------
     # The Brownian Motion Stochastic Process (Wiener Process)
