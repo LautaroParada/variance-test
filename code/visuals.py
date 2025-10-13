@@ -1,101 +1,157 @@
+"""Visual helpers for the variance ratio test simulations."""
+
+from typing import Iterable, Optional, Sequence, Tuple
+
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set_style('whitegrid')
 
 from variance_test import EMH
 from price_paths import PricePaths
 
 
+sns.set_style("whitegrid")
+
+__all__ = ["VRTVisuals"]
+
+
 class VRTVisuals:
+    """Colección de utilidades para visualizar simulaciones del VRT."""
 
-    def graficar_densidades(self, ref_stats, z_stats):
-        """
-        Grafica las densidades para una serie de datos
+    def graficar_densidades(
+        self,
+        ref_stats: Sequence[float],
+        z_stats: Sequence[float],
+        *,
+        ax: Optional[plt.Axes] = None,
+        mostrar: bool = True,
+        etiquetas: Tuple[str, str] = (
+            "Distribución de referencia",
+            "Puntajes Z*",
+        ),
+    ) -> plt.Axes:
+        """Comparar densidades de referencia y estadísticas simuladas."""
 
-        Los valores ref_stats (distribución normal) se muestran en rojo, ya que representan la luz que 'detiene'
-        el rechazo de la hipótesis nula. Se hace una representación análoga para los puntajes z del test.
-        """
-        # Graficar los valores de la distribución normal
-        sns.kdeplot(ref_stats, shade=True, color="r")
-        # Graficar los valores de la estadística
-        sns.kdeplot(z_stats, shade=True, color="g")
-        titulo = "Comparación de densidades de una variable con distribución normal (rojo)\ncontra los puntajes Z* calculados para la serie de precios logarítmicos analizada"
-        plt.title(titulo)
-        plt.show()
+        ref_values = np.asarray(ref_stats, dtype=float)
+        z_values = np.asarray(z_stats, dtype=float)
 
-    def graficar_estadisticas(self, proceso: str = 'brownian', rango_q: list = [5, 10],
-                               total_muestras: int = 500, precio_inicial: float = 1.0,
-                               tipo_estadistica: str = 'mr', **kwargs):
-        """
-        Genera las gráficas para las DIFERENCIAS UTILIZANDO EL ESTIMADOR DE MUESTRAS SUPERPUESTAS
+        if ref_values.ndim != 1 or ref_values.size < 2:
+            raise ValueError("ref_stats debe contener al menos dos valores unidimensionales.")
+        if z_values.ndim != 1 or z_values.size < 2:
+            raise ValueError("z_stats debe contener al menos dos valores unidimensionales.")
 
-        """
-        # Crear el objeto para las trayectorias de precios
-        sims = PricePaths(n=1, T=total_muestras * 2, s0=precio_inicial)
+        axis = ax or plt.gca()
+        sns.kdeplot(ref_values, fill=True, color="r", alpha=0.4, label=etiquetas[0], ax=axis)
+        sns.kdeplot(z_values, fill=True, color="g", alpha=0.4, label=etiquetas[1], ax=axis)
+        axis.set_title(
+            "Comparación de densidades entre una referencia normal (rojo)\n"
+            "y los puntajes Z* obtenidos de las trayectorias analizadas"
+        )
+        axis.legend()
 
-        # Diccionario para asignar el simulador
-        simuladores = {
-            'brownian': sims.brownian_prices,
-            'gmb': sims.gbm_prices,
-            'merton': sims.merton_prices
-        }
+        if mostrar:
+            plt.show()
 
-        # Obtener el simulador correspondiente al proceso
-        simulador = simuladores.get(proceso)
-        if not simulador:
-            print(f'Tu opción es {proceso}. Por favor, selecciona una de estas: brownian, gbm, merton')
-            return None
+        return axis
 
-        # Manejo de errores
+    def graficar_estadisticas(
+        self,
+        proceso: str = "brownian",
+        rango_q: Sequence[int] = (5, 10),
+        *,
+        total_muestras: int = 500,
+        precio_inicial: float = 1.0,
+        tipo_estadistica: str = "mr",
+        numero_caminos: int = 250,
+        mostrar: bool = True,
+        **kwargs,
+    ) -> Tuple[plt.Figure, np.ndarray]:
+        """Generar diagramas de dispersión para diferentes horizontes de agregación."""
+
+        if numero_caminos < 1:
+            raise ValueError("Se requiere al menos una trayectoria para generar estadísticas.")
+
         if len(rango_q) != 2:
-            print('Por favor, selecciona al menos 2 rangos para analizar, por ejemplo, [3,6]')
-            return None
+            raise ValueError("rango_q debe contener exactamente dos horizontes a comparar.")
 
-        # Estableciendo la estadística deseada
-        estadisticas = {
-            'md': EMH()._EMH__md,
-            'mr': EMH()._EMH__mr
+        q1, q2 = (int(q) for q in rango_q)
+        if q1 <= 0 or q2 <= 0:
+            raise ValueError("Los horizontes de agregación deben ser enteros positivos.")
+        if total_muestras <= max(q1, q2):
+            raise ValueError("total_muestras debe exceder el mayor horizonte de agregación.")
+
+        sims = PricePaths(n=numero_caminos, T=total_muestras, s0=precio_inicial)
+
+        simuladores = {
+            "brownian": sims.brownian_prices,
+            "gbm": sims.gbm_prices,
+            "gmb": sims.gbm_prices,
+            "merton": sims.merton_prices,
         }
 
-        estadistica = estadisticas.get(tipo_estadistica)
-        if not estadistica:
-            print('Estadística no válida, por favor, intenta con md o mr')
-            return None
+        simulador = simuladores.get(proceso.lower())
+        if simulador is None:
+            raise ValueError(
+                "Proceso desconocido. Selecciona uno de: brownian, gbm o merton."
+            )
 
-        nombre_estadistica = tipo_estadistica.capitalize()
+        emh = EMH()
+        estadisticas = {
+            "md": emh._EMH__md,
+            "mr": emh._EMH__mr,
+        }
 
-        # Función interna para generar estadísticas
-        def generar_estadisticas(q, unbiased):
-            return [estadistica(X=simulador(**kwargs), q=q, unbiased=unbiased) for muestra in range(q, total_muestras)]
+        estadistica = estadisticas.get(tipo_estadistica.lower())
+        if estadistica is None:
+            raise ValueError("Estadística no válida; utiliza 'md' o 'mr'.")
 
-        # Generando las estadísticas
-        statsQ1 = generar_estadisticas(rango_q[0], True)
-        statsQ2 = generar_estadisticas(rango_q[1], True)
-        statsVolQ1 = generar_estadisticas(rango_q[0], False)
-        statsVolQ2 = generar_estadisticas(rango_q[1], False)
+        def generar_estadisticas(q: int, unbiased: bool) -> Iterable[float]:
+            trayectorias = np.asarray(simulador(**kwargs), dtype=float)
+            if trayectorias.ndim == 1:
+                trayectorias = trayectorias[np.newaxis, :]
+            elif trayectorias.shape[0] == total_muestras:
+                trayectorias = trayectorias.T
+            elif trayectorias.shape[1] != total_muestras:
+                raise ValueError("Las trayectorias simuladas no tienen la longitud esperada.")
 
-        # Creando las gráficas
-        fig, axes = plt.subplots(2, 2, figsize=(15, 15))
-        fig.suptitle(f'Valores de {nombre_estadistica} para las trayectorias de precios {proceso.capitalize()}', fontsize=16)
+            return [
+                estadistica(X=serie, q=q, unbiased=unbiased)
+                for serie in trayectorias
+            ]
 
-        # Valores de MD sin Volatilidad Estocástica
-        axes[0, 0].plot(statsQ1, marker='o', linestyle='None')
-        axes[0, 0].set_title(f'Valores de {nombre_estadistica} sin Volatilidad Estocástica')
-        axes[0, 0].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[0]})')
+        stats_q1 = generar_estadisticas(q1, True)
+        stats_q2 = generar_estadisticas(q2, True)
+        stats_vol_q1 = generar_estadisticas(q1, False)
+        stats_vol_q2 = generar_estadisticas(q2, False)
 
-        axes[0, 1].plot(statsQ2, marker='o', linestyle='None')
-        axes[0, 1].set_title(f'Valores de {nombre_estadistica} sin Volatilidad Estocástica')
-        axes[0, 1].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[1]})')
+        fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+        fig.suptitle(
+            f"Valores de {tipo_estadistica.upper()} para trayectorias {proceso.capitalize()}",
+            fontsize=16,
+        )
 
-        # Valores de MD con Volatilidad Estocástica
-        axes[1, 0].plot(statsVolQ1, marker='o', linestyle='None')
-        axes[1, 0].set_title(f'Valores de {nombre_estadistica} con Volatilidad Estocástica')
-        axes[1, 0].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[0]})')
+        axes[0, 0].plot(stats_q1, marker="o", linestyle="None", alpha=0.7)
+        axes[0, 0].set_title("Sesgo corregido")
+        axes[0, 0].set_ylabel(f"{tipo_estadistica.upper()} (q={q1})")
 
-        axes[1, 1].plot(statsVolQ2, marker='o', linestyle='None')
-        axes[1, 1].set_title(f'Valores de {nombre_estadistica} con Volatilidad Estocástica')
-        axes[1, 1].set_ylabel(f'Valores de {nombre_estadistica}(q={rango_q[1]})')
+        axes[0, 1].plot(stats_q2, marker="o", linestyle="None", alpha=0.7)
+        axes[0, 1].set_title("Sesgo corregido")
+        axes[0, 1].set_ylabel(f"{tipo_estadistica.upper()} (q={q2})")
 
-        plt.show()
+        axes[1, 0].plot(stats_vol_q1, marker="o", linestyle="None", alpha=0.7)
+        axes[1, 0].set_title("Sin corrección")
+        axes[1, 0].set_ylabel(f"{tipo_estadistica.upper()} (q={q1})")
 
-        return
+        axes[1, 1].plot(stats_vol_q2, marker="o", linestyle="None", alpha=0.7)
+        axes[1, 1].set_title("Sin corrección")
+        axes[1, 1].set_ylabel(f"{tipo_estadistica.upper()} (q={q2})")
+
+        for axis in axes.flat:
+            axis.set_xlabel("Trayectoria")
+
+        fig.tight_layout(rect=(0, 0, 1, 0.97))
+
+        if mostrar:
+            plt.show()
+
+        return fig, axes
