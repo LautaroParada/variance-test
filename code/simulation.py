@@ -94,7 +94,16 @@ def _restore_random_seed(state: Optional[Tuple]) -> None:
 
 
 def simulate_price_processes(config: SimulationConfig) -> Tuple[Dict[str, np.ndarray], float]:
-    """Generate price trajectories for the supported stochastic models."""
+    """
+    Generate price trajectories for the supported stochastic models using values from `config`.
+    
+    Parameters:
+        config (SimulationConfig): Configuration containing simulation parameters (number of series, horizon, initial price, mu, sigma, jump_intensity, kappa, theta, risk_free_rate, seed, etc.).
+    
+    Returns:
+        processes (Dict[str, np.ndarray]): Mapping of model name to a 2-D NumPy array of simulated price trajectories for the keys "gbm", "merton", and "heston".
+        elapsed (float): Wall-clock time in seconds spent generating the price trajectories.
+    """
 
     rng_state = _set_random_seed(config.seed)
     start = time.perf_counter()
@@ -135,7 +144,23 @@ def compute_vrt_statistics(
     heteroskedastic: bool,
     emh: Optional[EMH] = None,
 ) -> Tuple[np.ndarray, np.ndarray, float]:
-    """Evaluate the VRT statistic for each provided price trajectory."""
+    """
+    Compute the variance ratio test (VRT) statistic and p-value for each price trajectory.
+    
+    Parameters:
+        paths (np.ndarray): 1-D or 2-D array of price trajectories. If 2-D, each column is treated as a separate series.
+        q (int): Aggregation horizon (must be greater than zero) used by the VRT.
+        heteroskedastic (bool): If True, use the heteroskedasticity-consistent VRT; otherwise use the homoskedastic version.
+        emh (Optional[EMH]): Optional EMH instance to compute the VRT; a new EMH is created if omitted.
+    
+    Returns:
+        z_values (np.ndarray): Array of VRT z-scores, one entry per series.
+        p_values (np.ndarray): Array of two-sided p-values corresponding to each z-score.
+        elapsed (float): Time in seconds spent computing the statistics.
+    
+    Raises:
+        ValueError: If q is not a positive integer or if paths is not a 1-D or 2-D array of trajectories.
+    """
 
     if q <= 0:
         raise ValueError("q must be a positive integer.")
@@ -180,7 +205,21 @@ def compute_vrt_statistics(
 
 
 def run_simulation(config: SimulationConfig) -> SimulationResults:
-    """Execute the full pipeline: simulate paths, compute VRT, and collect outputs."""
+    """
+    Run the full simulation pipeline: generate price paths, compute variance-ratio test statistics, and assemble results.
+    
+    Parameters:
+        config (SimulationConfig): Experiment configuration (models, horizon, aggregation horizon, seed, etc.).
+    
+    Returns:
+        SimulationResults: Container with:
+            - processes: dict mapping model name to ndarray of simulated price trajectories.
+            - z_scores: ndarray of VRT z-scores per series.
+            - p_values: ndarray of VRT p-values per series.
+            - reference_distribution: ndarray of standard-normal reference samples (seeded from config.seed).
+            - simulation_time: float seconds spent generating price paths.
+            - test_time: float seconds spent computing VRT statistics.
+    """
 
     processes, simulation_time = simulate_price_processes(config)
     combined = np.column_stack(tuple(processes.values()))
@@ -310,4 +349,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
