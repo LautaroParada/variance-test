@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import time
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -128,18 +128,6 @@ def simulate_price_processes(config: SimulationConfig) -> Tuple[Dict[str, np.nda
     return processes, elapsed
 
 
-def _iter_series(matrix: np.ndarray) -> Iterable[np.ndarray]:
-    """Yield 1-D price series from an array of stacked paths."""
-
-    data = np.asarray(matrix, dtype=float)
-    if data.ndim == 1:
-        yield data
-        return
-
-    for idx in range(data.shape[1]):
-        yield data[:, idx]
-
-
 def compute_vrt_statistics(
     paths: np.ndarray,
     q: int,
@@ -154,11 +142,21 @@ def compute_vrt_statistics(
 
     model = emh or EMH()
     start = time.perf_counter()
-    z_values = []
-    p_values = []
 
-    for series in _iter_series(paths):
-        z_score, p_value = model.vrt(
+    data = np.asarray(paths, dtype=float)
+    if data.ndim == 1:
+        num_series = 1
+    elif data.ndim == 2:
+        num_series = data.shape[1]
+    else:
+        raise ValueError("paths must be a 1-D or 2-D array of price trajectories.")
+
+    z_values = np.empty(num_series, dtype=float)
+    p_values = np.empty(num_series, dtype=float)
+
+    if num_series == 1:
+        series = data if data.ndim == 1 else data[:, 0]
+        z_values[0], p_values[0] = model.vrt(
             X=series,
             q=q,
             heteroskedastic=heteroskedastic,
@@ -166,11 +164,19 @@ def compute_vrt_statistics(
             unbiased=True,
             annualize=True,
         )
-        z_values.append(z_score)
-        p_values.append(p_value)
+    else:
+        for idx in range(num_series):
+            z_values[idx], p_values[idx] = model.vrt(
+                X=data[:, idx],
+                q=q,
+                heteroskedastic=heteroskedastic,
+                centered=True,
+                unbiased=True,
+                annualize=True,
+            )
 
     elapsed = time.perf_counter() - start
-    return np.asarray(z_values, dtype=float), np.asarray(p_values, dtype=float), elapsed
+    return z_values, p_values, elapsed
 
 
 def run_simulation(config: SimulationConfig) -> SimulationResults:
