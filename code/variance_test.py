@@ -88,7 +88,7 @@ class EMH(object):
                 lead = one_period_diffs[j:]
                 lagged = one_period_diffs[:-j]
                 if unbiased:
-                    gamma_j = float(np.dot(lead, lagged)) / (n_diffs - j - 1)
+                    gamma_j = float(np.dot(lead, lagged)) / (n_diffs - j)
                 else:
                     gamma_j = float(np.dot(lead, lagged)) / n_diffs
             
