@@ -69,12 +69,12 @@ class EMH(object):
         # sigma_b(q) = sum_{j=0}^{q-1} [2(q-j)/q] * gamma(j)
         # where gamma(j) is the j-th lag autocovariance of 1-period returns
         # Use observations from 0 to upper_bound (inclusive), giving upper_bound one-period differences
-        if upper_bound >= n_obs:
-            # Edge case: can only use n_obs-1 differences
-            one_period_diffs = series[1:n_obs] - series[:n_obs - 1] - mu_est
-        else:
-            # Normal case: use upper_bound differences
+        # Edge case: when upper_bound = n_obs, we can only access up to n_obs-1
+        if upper_bound < n_obs:
             one_period_diffs = series[1:upper_bound + 1] - series[:upper_bound] - mu_est
+        else:
+            # When upper_bound = n_obs, we can only get (n_obs - 1) differences
+            one_period_diffs = series[1:n_obs] - series[:n_obs - 1] - mu_est
         n_diffs = len(one_period_diffs)
         
         sigma_b = 0.0
