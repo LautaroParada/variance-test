@@ -116,10 +116,12 @@ def simulate_price_processes(config: SimulationConfig) -> Tuple[Dict[str, np.nda
             dtype=float,
         )
 
+        # Convert to log prices for variance ratio test
+        # VRT expects log prices (differences are log returns)
         processes = {
-            "gbm": gbm,
-            "merton": merton,
-            "heston": heston,
+            "gbm": np.log(gbm),
+            "merton": np.log(merton),
+            "heston": np.log(heston),
         }
     finally:
         _restore_random_seed(rng_state)

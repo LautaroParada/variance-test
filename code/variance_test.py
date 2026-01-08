@@ -65,16 +65,38 @@ class EMH(object):
 
         sigma_a /= denom_a
 
-        q_diffs = series[q:upper_bound] - series[: upper_bound - q] - (q * mu_est)
-        sigma_b = float(np.dot(q_diffs, q_diffs))
-
-        if unbiased:
-            m = q * (upper_bound - q + 1) * (1 - (q / upper_bound))
-            if m <= 0:
-                raise ValueError("Unbiased adjustment resulted in a non-positive denominator.")
-            sigma_b /= m
+        # Calculate sigma_b using weighted autocovariances (Lo & MacKinlay 1988, eq. 6a)
+        # sigma_b(q) = sum_{j=0}^{q-1} [2(q-j)/q] * gamma(j)
+        # where gamma(j) is the j-th lag autocovariance of 1-period returns
+        # Use observations from 0 to upper_bound (inclusive), giving upper_bound one-period differences
+        # Edge case: when upper_bound = n_obs, we can only access up to n_obs-1
+        if upper_bound < n_obs:
+            one_period_diffs = series[1:upper_bound + 1] - series[:upper_bound] - mu_est
         else:
-            sigma_b /= (upper_bound / q) * (q ** 2)
+            # When upper_bound = n_obs, we can only get (n_obs - 1) differences
+            one_period_diffs = series[1:n_obs] - series[:n_obs - 1] - mu_est
+        n_diffs = len(one_period_diffs)
+        
+        sigma_b = 0.0
+        for j in range(q):
+            weight = (2 * (q - j) / q) if j > 0 else 1.0
+            
+            if j == 0:
+                # Variance (lag-0 autocovariance)
+                if unbiased:
+                    gamma_j = float(np.dot(one_period_diffs, one_period_diffs)) / (n_diffs - 1)
+                else:
+                    gamma_j = float(np.dot(one_period_diffs, one_period_diffs)) / n_diffs
+            else:
+                # Autocovariance at lag j
+                lead = one_period_diffs[j:]
+                lagged = one_period_diffs[:-j]
+                if unbiased:
+                    gamma_j = float(np.dot(lead, lagged)) / (n_diffs - j)
+                else:
+                    gamma_j = float(np.dot(lead, lagged)) / n_diffs
+            
+            sigma_b += weight * gamma_j
 
         if annualize:
             sigma_a = float(np.sqrt(sigma_a * 252))
@@ -97,7 +119,7 @@ class EMH(object):
         vol_a, vol_b = self.__variance_estimators(
             X, q=q, unbiased=unbiased, annualize=annualize
         )
-        return vol_b - vol_a
+        return vol_a - vol_b
 
     def __mr(self, X, q: int, unbiased: bool = True, annualize: bool = True):
         """Centered variance ratio statistic."""
@@ -105,7 +127,7 @@ class EMH(object):
         vol_a, vol_b = self.__variance_estimators(
             X, q=q, unbiased=unbiased, annualize=annualize
         )
-        return (vol_b / vol_a) - 1
+        return (vol_a / vol_b) - 1
 
     def __h1(self, X, q: int, centered: bool = True, unbiased: bool = True, annualize: bool = True):
         """IID Gaussian null hypothesis."""
@@ -119,13 +141,13 @@ class EMH(object):
             raise ValueError("Not enough observations for the requested aggregation horizon.")
 
         if centered:
-            z1 = np.sqrt(n * q) * self.__mr(
+            z1 = np.sqrt(n) * self.__mr(
                 X=X, q=q, unbiased=unbiased, annualize=annualize
             )
             asymp = (2 * (2 * q - 1) * (q - 1)) / (3 * q)
             return z1 / np.sqrt(asymp)
 
-        z1 = np.sqrt(n * q) * self.__md(
+        z1 = np.sqrt(n) * self.__md(
             X=X, q=q, unbiased=unbiased, annualize=annualize
         )
         return z1
@@ -213,7 +235,7 @@ class EMH(object):
         if n <= 0:
             raise ValueError("Not enough observations for the requested aggregation horizon.")
 
-        z2 = np.sqrt(n * q) * self.__mr(
+        z2 = np.sqrt(n) * self.__mr(
             X=X, q=q, unbiased=unbiased, annualize=annualize
         )
         v_hat = self.__v_hat(X=X, q=q)
