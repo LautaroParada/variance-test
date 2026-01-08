@@ -68,7 +68,9 @@ class EMH(object):
         # Calculate sigma_b using weighted autocovariances (Lo & MacKinlay 1988, eq. 6a)
         # sigma_b(q) = sum_{j=0}^{q-1} [2(q-j)/q] * gamma(j)
         # where gamma(j) is the j-th lag autocovariance of 1-period returns
-        one_period_diffs = series[1:upper_bound + 1] - series[:upper_bound] - mu_est
+        # Use up to upper_bound observations, giving upper_bound-1 one-period differences
+        n_for_sigma_b = min(upper_bound, n_obs - 1)
+        one_period_diffs = series[1:n_for_sigma_b + 1] - series[:n_for_sigma_b] - mu_est
         n_diffs = len(one_period_diffs)
         
         sigma_b = 0.0
