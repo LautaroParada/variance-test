@@ -4,13 +4,8 @@ from typing import Iterable, Optional, Sequence, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-
-from variance_test import EMH
-from price_paths import PricePaths
-
-
-sns.set_style("whitegrid")
+from .core import EMH
+from .price_paths import PricePaths
 
 __all__ = ["VRTVisuals"]
 
@@ -41,8 +36,22 @@ class VRTVisuals:
             raise ValueError("z_stats debe contener al menos dos valores unidimensionales.")
 
         axis = ax or plt.gca()
-        sns.kdeplot(ref_values, fill=True, color="r", alpha=0.4, label=etiquetas[0], ax=axis)
-        sns.kdeplot(z_values, fill=True, color="g", alpha=0.4, label=etiquetas[1], ax=axis)
+        axis.hist(
+            ref_values,
+            bins="auto",
+            density=True,
+            color="r",
+            alpha=0.4,
+            label=etiquetas[0],
+        )
+        axis.hist(
+            z_values,
+            bins="auto",
+            density=True,
+            color="g",
+            alpha=0.4,
+            label=etiquetas[1],
+        )
         axis.set_title(
             "Comparación de densidades entre una referencia normal (rojo)\n"
             "y los puntajes Z* obtenidos de las trayectorias analizadas"

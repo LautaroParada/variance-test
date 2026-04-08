@@ -9,9 +9,9 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from price_paths import PricePaths
-from variance_test import EMH
-from visuals import VRTVisuals
+from .price_paths import PricePaths
+from .core import EMH
+from .visuals import VRTVisuals
 
 
 @dataclass
