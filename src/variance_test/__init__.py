@@ -1,5 +1,6 @@
 """Public package interface for variance ratio testing."""
 
+from .battery import run_weak_form_battery
 from .core import EMH
 from .data import NormalizedSeries, normalize_series
 from .models import BatteryConfig, BatteryOutcome, TestOutcome
@@ -27,4 +28,5 @@ __all__ = [
     "BatteryConfig",
     "TestOutcome",
     "BatteryOutcome",
+    "run_weak_form_battery",
 ]

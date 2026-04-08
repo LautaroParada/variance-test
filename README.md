@@ -58,6 +58,36 @@ Desde este sprint también acepta **returns** con `input_kind="returns"`; en ese
 reconstruye internamente una serie sintética de log-prices con origen `0.0` y aplica
 el mismo VRT.
 
+
+### Weak-form Battery v1
+
+The package now includes an executable weak-form efficiency battery via `run_weak_form_battery(...)`.
+
+Battery v1 includes:
+- variance ratio multi-q
+- Ljung-Box returns
+- Ljung-Box squared returns
+- runs test on signs
+- ARCH LM
+- Holm summary for the VR family
+
+```python
+import numpy as np
+from variance_test import BatteryConfig, run_weak_form_battery
+
+rng = np.random.default_rng(42)
+returns = rng.normal(0.0, 0.01, size=2000)
+
+config = BatteryConfig(input_kind="returns", q_list=(2, 4, 8), ljung_box_lags=(5, 10, 20))
+outcome = run_weak_form_battery(returns, config=config)
+print(outcome.multiple_testing["battery_summary"])
+```
+
+> Warning: this battery provides evidence against compatibility with weak-form efficiency **under this battery**.
+> It is **not** definitive proof of market inefficiency.
+>
+> Note: `rolling = None` in this version.
+
 ### Running Simulations
 
 The package includes a comprehensive simulation framework to test the VRT on different stochastic processes:

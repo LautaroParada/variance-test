@@ -23,6 +23,7 @@ dependencies = [
   "numpy",
   "scipy",
   "matplotlib",
+  "statsmodels",
 ]
 
 [project.urls]
