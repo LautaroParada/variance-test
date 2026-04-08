@@ -1,6 +1,8 @@
 """Public package interface for variance ratio testing."""
 
 from .core import EMH
+from .data import NormalizedSeries, normalize_series
+from .models import BatteryConfig, BatteryOutcome, TestOutcome
 from .price_paths import PricePaths
 from .simulation import (
     SimulationConfig,
@@ -20,4 +22,9 @@ __all__ = [
     "simulate_price_processes",
     "compute_vrt_statistics",
     "run_simulation",
+    "NormalizedSeries",
+    "normalize_series",
+    "BatteryConfig",
+    "TestOutcome",
+    "BatteryOutcome",
 ]

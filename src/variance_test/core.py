@@ -3,6 +3,8 @@
 import numpy as np
 import scipy.stats as st
 
+from .data import normalize_series
+
 
 class EMH(object):
     """Empirical tests for the Efficient Market Hypothesis."""
@@ -11,19 +13,11 @@ class EMH(object):
     # Homoskedastic Null Hypothesis
     # ------------------------------------------------------------------
 
-    def __prepare_prices(self, X: np.ndarray) -> np.ndarray:
-        """Validate and standardize a price series into a 1-D NumPy array."""
-
-        prices = np.asarray(X, dtype=float).reshape(-1)
-        if prices.size < 2:
-            raise ValueError("At least two observations are required to estimate drift.")
-
-        return prices
 
     def __mu(self, X: np.ndarray, annualize: bool = True) -> float:
         """Estimate the drift component of a log price process."""
 
-        prices = self.__prepare_prices(X)
+        prices = np.asarray(X, dtype=float)
         mu_est = (prices[-1] - prices[0]) / prices.shape[0]
         return float(mu_est * 252) if annualize else float(mu_est)
 
@@ -39,7 +33,7 @@ class EMH(object):
         if q <= 0:
             raise ValueError("Aggregation horizon q must be a positive integer.")
 
-        series = self.__prepare_prices(prices)
+        series = np.asarray(prices, dtype=float)
         n_obs = series.shape[0]
         if n_obs <= q:
             raise ValueError("Not enough observations for the requested aggregation horizon.")
@@ -135,7 +129,7 @@ class EMH(object):
         if q <= 0:
             raise ValueError("Aggregation horizon q must be a positive integer.")
 
-        prices = self.__prepare_prices(X)
+        prices = np.asarray(X, dtype=float)
         n = np.floor(prices.shape[0] / q)
         if n <= 0:
             raise ValueError("Not enough observations for the requested aggregation horizon.")
@@ -164,7 +158,7 @@ class EMH(object):
         if j <= 0 or j >= q:
             raise ValueError("Lag j must satisfy 0 < j < q.")
 
-        prices = self.__prepare_prices(X)
+        prices = np.asarray(X, dtype=float)
         n = int(np.floor(prices.shape[0] / q))
         upper_bound = n * q
         if upper_bound <= j + 1:
@@ -201,7 +195,7 @@ class EMH(object):
         if q < 3:
             raise ValueError("q must be at least 3 for the heteroskedastic variance estimator.")
 
-        prices = self.__prepare_prices(X)
+        prices = np.asarray(X, dtype=float)
         n = int(np.floor(prices.shape[0] / q))
         upper_bound = n * q
         if upper_bound <= q:
@@ -230,7 +224,7 @@ class EMH(object):
         if not centered:
             raise ValueError("Non-centered heteroskedastic statistic is not implemented.")
 
-        prices = self.__prepare_prices(X)
+        prices = np.asarray(X, dtype=float)
         n = np.floor(prices.shape[0] / q)
         if n <= 0:
             raise ValueError("Not enough observations for the requested aggregation horizon.")
@@ -253,17 +247,65 @@ class EMH(object):
         centered: bool = True,
         unbiased: bool = True,
         annualize: bool = True,
+        *,
+        input_kind: str = "log_prices",
+        alternative: str = "two-sided",
     ):
-        """Compute the Variance Ratio test statistic and its p-value."""
+        """Compute the Variance Ratio test statistic and p-value.
+
+        Historical behavior is preserved: by default, ``X`` is interpreted as
+        ``input_kind="log_prices"``. You may also pass raw returns via
+        ``input_kind="returns"``; the method reconstructs synthetic log-prices
+        with origin ``0.0`` internally and reuses the same VRT math pipeline.
+
+        Args:
+            X: One-dimensional series of log-prices or returns.
+            q: Aggregation horizon.
+            heteroskedastic: Whether to use heteroskedastic asymptotic variance.
+            centered: Whether to use centered statistic.
+            unbiased: Whether to use unbiased variance/autocovariance estimators.
+            annualize: Scales intermediate volatility estimators only; it does
+                not change the test-statistic logic itself.
+            input_kind: ``"log_prices"`` (default) or ``"returns"``.
+            alternative: Tail alternative for p-value calculation:
+                ``"two-sided"`` uses ``2 * (1 - Phi(abs(z)))``;
+                ``"greater"`` uses ``1 - Phi(z)``;
+                ``"less"`` uses ``Phi(z)``.
+
+        Returns:
+            A tuple ``(z_score, p_value)``.
+        """
+
+        if input_kind not in {"log_prices", "returns"}:
+            raise ValueError("input_kind must be 'log_prices' or 'returns'.")
+        if alternative not in {"two-sided", "greater", "less"}:
+            raise ValueError("alternative must be 'two-sided', 'greater', or 'less'.")
+
+        normalized = normalize_series(X, input_kind=input_kind)
+        log_prices = normalized.log_prices
 
         if heteroskedastic:
             z_score = self.__h2(
-                X=X, q=q, centered=centered, unbiased=unbiased, annualize=annualize
+                X=log_prices,
+                q=q,
+                centered=centered,
+                unbiased=unbiased,
+                annualize=annualize,
             )
         else:
             z_score = self.__h1(
-                X=X, q=q, centered=centered, unbiased=unbiased, annualize=annualize
+                X=log_prices,
+                q=q,
+                centered=centered,
+                unbiased=unbiased,
+                annualize=annualize,
             )
 
-        p_value = 1 - st.norm.cdf(z_score)
+        if alternative == "two-sided":
+            p_value = 2 * (1 - st.norm.cdf(abs(z_score)))
+        elif alternative == "greater":
+            p_value = 1 - st.norm.cdf(z_score)
+        else:
+            p_value = st.norm.cdf(z_score)
+
         return z_score, p_value
