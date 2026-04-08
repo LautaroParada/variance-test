@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [
-  { name = "variance-test maintainers" }
+  { name = "SeraFlow" }
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -26,8 +26,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/example/variance-test"
-Repository = "https://github.com/example/variance-test"
+Homepage = "https://github.com/LautaroParada/variance-test"
+Repository = "https://github.com/LautaroParada/variance-test"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
