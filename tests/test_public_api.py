@@ -14,6 +14,7 @@ from variance_test import (
     compute_vrt_statistics,
     normalize_series,
     run_simulation,
+    run_weak_form_battery,
     simulate_price_processes,
 )
 import variance_test
@@ -33,6 +34,7 @@ EXPECTED_PUBLIC_API = {
     "BatteryConfig",
     "TestOutcome",
     "BatteryOutcome",
+    "run_weak_form_battery",
 }
 
 
@@ -64,6 +66,11 @@ def test_new_data_contract_api_importable_from_root() -> None:
     assert TestOutcome is not None
     assert BatteryOutcome is not None
 
+
+
+def test_run_weak_form_battery_importable_from_root() -> None:
+    """run_weak_form_battery must be importable from package root."""
+    assert run_weak_form_battery is not None
 
 def test_all_contains_exact_public_api() -> None:
     """__all__ must match the required minimal API exactly."""
