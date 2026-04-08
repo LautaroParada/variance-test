@@ -1,6 +1,6 @@
 # Variance Ratio Test [![ForTheBadge built-with-science](http://ForTheBadge.com/images/badges/built-with-science.svg)](https://GitHub.com/Naereen/)
 
-[![Python Version](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://ansicolortags.readthedocs.io/?badge=latest) 
+[![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://shields.io/) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity) [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://ansicolortags.readthedocs.io/?badge=latest) 
 
 A comprehensive implementation of the Variance Ratio Test following Lo & MacKinlay (1988), providing statistical tools for examining the stochastic evolution of financial log price series. The test evaluates the Random Walk Hypothesis (Efficient Markets Hypothesis) by comparing variance estimators at different sampling intervals.
 
@@ -27,12 +27,12 @@ The Variance Ratio Test investigates market efficiency by testing whether log pr
 ### Requirements
 
 ```bash
-pip install numpy scipy matplotlib seaborn
+pip install -e .
 ```
 
 ### Python Version
 
-Python 3.8 or higher is required.
+Python 3.11 or higher is required.
 
 ## Usage
 
@@ -40,7 +40,7 @@ Python 3.8 or higher is required.
 
 ```python
 import numpy as np
-from code.variance_test import EMH
+from variance_test import EMH
 
 # Generate or load log prices (NOT actual prices)
 # The VRT expects log prices where differences are log returns
@@ -71,8 +71,7 @@ print(f"p-value: {p_value:.4f}")
 The package includes a comprehensive simulation framework to test the VRT on different stochastic processes:
 
 ```bash
-cd code
-python simulation.py --series 10 --horizon 100 --aggregation 3 --seed 42 --no-plot
+python -m variance_test.simulation --series 10 --horizon 100 --aggregation 3 --seed 42 --no-plot
 ```
 
 #### Command Line Arguments
@@ -94,7 +93,7 @@ python simulation.py --series 10 --horizon 100 --aggregation 3 --seed 42 --no-pl
 ### Simulation Example with Python
 
 ```python
-from code.simulation import SimulationConfig, run_simulation
+from variance_test import SimulationConfig, run_simulation
 
 config = SimulationConfig(
     num_series=5,
@@ -212,18 +211,22 @@ The Variance Ratio test results do not necessarily imply that the stock market i
 
 ```
 variance-test/
-├── code/
-│   ├── __init__.py
-│   ├── variance_test.py      # Core VRT implementation (EMH class)
-│   ├── price_paths.py         # Stochastic process generators
-│   ├── simulation.py          # Simulation framework and CLI
-│   ├── visuals.py            # Plotting utilities
-│   └── empirical_application.py
-├── img/                       # Documentation images
+├── src/
+│   └── variance_test/
+│       ├── __init__.py
+│       ├── core.py               # Core VRT implementation (EMH class)
+│       ├── price_paths.py        # Stochastic process generators
+│       ├── simulation.py         # Simulation framework and CLI
+│       └── visuals.py            # Plotting utilities
+├── examples/
+│   └── empirical_application.py  # Optional external example (uses external deps)
+├── tests/
+├── pyproject.toml
 ├── README.md
-├── AUDIT.md                   # Implementation audit log
 └── LICENSE
 ```
+
+The historical internal module `variance_test.py` was renamed to `core.py` to avoid colliding with the package name. Import public symbols from `variance_test`.
 
 ## Recent Updates
 

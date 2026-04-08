@@ -12,8 +12,8 @@ from datetime import datetime
 import os
 from eod import EodHistoricalData
 
-from price_paths import PricePaths
-from visuals import VRTVisuals
+from variance_test import PricePaths
+from variance_test import VRTVisuals
 from variance_test import EMH
 
 #%% Creating the reference variables
