@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from variance_test import (
+    BatteryConfig,
+    BatteryOutcome,
     EMH,
+    NormalizedSeries,
     PricePaths,
     SimulationConfig,
     SimulationResults,
+    TestOutcome,
     compute_vrt_statistics,
+    normalize_series,
     run_simulation,
     simulate_price_processes,
 )
@@ -23,6 +28,11 @@ EXPECTED_PUBLIC_API = {
     "simulate_price_processes",
     "compute_vrt_statistics",
     "run_simulation",
+    "NormalizedSeries",
+    "normalize_series",
+    "BatteryConfig",
+    "TestOutcome",
+    "BatteryOutcome",
 }
 
 
@@ -44,6 +54,15 @@ def test_simulation_entities_importable_from_root() -> None:
     assert simulate_price_processes is not None
     assert compute_vrt_statistics is not None
     assert run_simulation is not None
+
+
+def test_new_data_contract_api_importable_from_root() -> None:
+    """Sprint 2 data/model contracts must be importable from package root."""
+    assert NormalizedSeries is not None
+    assert normalize_series is not None
+    assert BatteryConfig is not None
+    assert TestOutcome is not None
+    assert BatteryOutcome is not None
 
 
 def test_all_contains_exact_public_api() -> None:

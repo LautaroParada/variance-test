@@ -42,29 +42,21 @@ Python 3.11 or higher is required.
 import numpy as np
 from variance_test import EMH
 
-# Generate or load log prices (NOT actual prices)
-# The VRT expects log prices where differences are log returns
-np.random.seed(42)
-log_prices = np.log(np.cumsum(np.random.randn(201)) * 0.01 + 100)
-
-# Initialize the Efficient Market Hypothesis tester
 emh = EMH()
 
-# Run the variance ratio test
-# q: aggregation horizon (e.g., q=2 for 2-period returns)
-# heteroskedastic: True for heteroskedastic null, False for homoskedastic null
-z_score, p_value = emh.vrt(
-    X=log_prices,
-    q=2,
-    heteroskedastic=False,  # Use homoskedastic test
-    centered=True,
-    unbiased=True,
-    annualize=False
-)
+# Modo log-prices (default histórico)
+log_prices = np.log(np.cumsum(np.random.randn(201)) * 0.01 + 100)
+z_score, p_value = emh.vrt(X=log_prices, q=4, input_kind="log_prices")
 
-print(f"z-statistic: {z_score:.4f}")
-print(f"p-value: {p_value:.4f}")
+# Modo returns
+returns = np.diff(log_prices)
+z_score, p_value = emh.vrt(X=returns, q=4, input_kind="returns")
 ```
+
+`EMH.vrt` interpreta `X` como **log-prices** por default para mantener compatibilidad histórica.
+Desde este sprint también acepta **returns** con `input_kind="returns"`; en ese caso,
+reconstruye internamente una serie sintética de log-prices con origen `0.0` y aplica
+el mismo VRT.
 
 ### Running Simulations
 
@@ -146,13 +138,13 @@ The `price_paths.py` module generates price trajectories for various stochastic 
 - **Cox-Ingersoll-Ross (CIR)**: Square-root diffusion process
 - **Ornstein-Uhlenbeck Process**: Mean-reverting process
 
-**Important**: All price path generators return **actual prices**, not log prices. The simulation framework automatically converts these to log prices before applying the VRT.
+**Important**: All price path generators return **actual prices**, not log-prices. The simulation framework automatically converts actual prices to log-prices before applying the VRT.
 
 ### Key Features
 
 - ✅ Correct implementation of Lo & MacKinlay (1988) formulas
 - ✅ Both homoskedastic and heteroskedastic tests
-- ✅ Proper handling of log prices vs. actual prices
+- ✅ Proper handling of log-prices vs. actual prices
 - ✅ Edge case handling for small samples
 - ✅ Multiple stochastic process simulations
 - ✅ Comprehensive testing framework
