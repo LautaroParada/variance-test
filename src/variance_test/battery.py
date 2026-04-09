@@ -33,48 +33,77 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
     outcomes: dict[str, TestOutcome] = {}
 
     for q in config.q_list:
-        z_score, p_value = emh.vrt(
-            X=normalized.log_prices,
-            q=q,
-            heteroskedastic=True,
-            centered=True,
-            unbiased=True,
-            annualize=False,
-            input_kind="log_prices",
-            alternative="two-sided",
-        )
         name = f"variance_ratio_q{q}"
-        outcomes[name] = TestOutcome(
-            name=name,
-            null_hypothesis="Variance ratio equals 1 under the random walk null.",
-            statistic=float(z_score),
-            p_value=float(p_value),
-            alpha=config.alpha,
-            reject_null=bool(p_value < config.alpha),
-            metadata={
-                "q": q,
-                "heteroskedastic": True,
-                "centered": True,
-                "unbiased": True,
-                "annualize": False,
-                "input_kind_used": "log_prices",
-                "alternative": "two-sided",
-            },
-            warnings=[],
-        )
+
+        try:
+            z_score, p_value = emh.vrt(
+                X=normalized.log_prices,
+                q=q,
+                heteroskedastic=True,
+                centered=True,
+                unbiased=True,
+                annualize=False,
+                input_kind="log_prices",
+                alternative="two-sided",
+            )
+
+            outcomes[name] = TestOutcome(
+                name=name,
+                null_hypothesis="Variance ratio equals 1 under the random walk null.",
+                statistic=float(z_score),
+                p_value=float(p_value),
+                alpha=config.alpha,
+                reject_null=bool(p_value < config.alpha),
+                metadata={
+                    "q": q,
+                    "heteroskedastic": True,
+                    "centered": True,
+                    "unbiased": True,
+                    "annualize": False,
+                    "input_kind_used": "log_prices",
+                    "alternative": "two-sided",
+                },
+                warnings=[],
+            )
+
+        except ValueError as exc:
+            outcomes[name] = TestOutcome(
+                name=name,
+                null_hypothesis="Variance ratio equals 1 under the random walk null.",
+                statistic=None,
+                p_value=None,
+                alpha=config.alpha,
+                reject_null=None,
+                metadata={
+                    "q": q,
+                    "heteroskedastic": True,
+                    "centered": True,
+                    "unbiased": True,
+                    "annualize": False,
+                    "input_kind_used": "log_prices",
+                    "alternative": "two-sided",
+                    "reason": str(exc),
+                },
+                warnings=[f"Variance ratio not computable for q={q}: {exc}"],
+            )
 
     return outcomes
 
 
 def _apply_holm_bonferroni(vr_outcomes: list[TestOutcome], alpha: float) -> dict[str, object]:
-    """Apply Holm-Bonferroni correction to the variance-ratio family."""
-    family = [outcome.name for outcome in vr_outcomes]
-    raw_p_values = {outcome.name: float(outcome.p_value) for outcome in vr_outcomes}
+    """Apply Holm-Bonferroni correction to the variance-ratio family.
 
-    sorted_outcomes = sorted(vr_outcomes, key=lambda item: (float(item.p_value), item.name))
+    Non-computable tests (p_value is None) are treated as non-rejections and
+    are excluded from the step-down ordering, but still appear in the summary.
+    """
+    family = [outcome.name for outcome in vr_outcomes]
+    raw_p_values = {outcome.name: outcome.p_value for outcome in vr_outcomes}
+
+    computable = [outcome for outcome in vr_outcomes if outcome.p_value is not None]
+    sorted_outcomes = sorted(computable, key=lambda item: (float(item.p_value), item.name))
     m = len(sorted_outcomes)
 
-    thresholds: dict[str, float] = {}
+    thresholds: dict[str, float | None] = {name: None for name in family}
     rejections: dict[str, bool] = {name: False for name in family}
 
     stop = False

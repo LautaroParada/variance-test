@@ -121,6 +121,10 @@ class EMH(object):
         vol_a, vol_b = self.__variance_estimators(
             X, q=q, unbiased=unbiased, annualize=annualize
         )
+
+        if vol_b <= 0:
+            raise ValueError("One-period variance estimate must be positive.")
+
         return (vol_a / vol_b) - 1
 
     def __h1(self, X, q: int, centered: bool = True, unbiased: bool = True, annualize: bool = True):
@@ -192,8 +196,8 @@ class EMH(object):
     def __v_hat(self, X, q: int):
         """Asymptotic variance of the centered ratio under heteroskedasticity."""
 
-        if q < 3:
-            raise ValueError("q must be at least 3 for the heteroskedastic variance estimator.")
+        if q < 2:
+            raise ValueError("q must be at least 2 for the heteroskedastic variance estimator.")
 
         prices = np.asarray(X, dtype=float)
         n = int(np.floor(prices.shape[0] / q))
@@ -208,7 +212,7 @@ class EMH(object):
             raise ValueError("Second moment of the differenced series is non-positive.")
 
         v_hat = 0.0
-        for j in range(1, q - 1):
+        for j in range(1, q):
             delta = self.__delta_from_diffs(diffs, denominator, upper_bound, j)
             weight = (2 * (q - j) / q) ** 2
             v_hat += weight * delta
