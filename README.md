@@ -86,7 +86,40 @@ print(outcome.multiple_testing["battery_summary"])
 > Warning: this battery provides evidence against compatibility with weak-form efficiency **under this battery**.
 > It is **not** definitive proof of market inefficiency.
 >
-> Note: `rolling = None` in this version.
+Rolling mode is available by setting `BatteryConfig(rolling_window=..., rolling_step=...)`.
+In this version, rolling results are provided only for:
+- variance ratio multi-q
+- Ljung-Box returns
+- Ljung-Box squared returns
+
+Rolling mode is **not** implemented in this version for:
+- Holm summary
+- runs test
+- ARCH LM
+
+```python
+import numpy as np
+from variance_test import BatteryConfig, run_weak_form_battery
+
+rng = np.random.default_rng(123)
+returns = rng.normal(0.0, 0.01, size=1200)
+
+config = BatteryConfig(
+    input_kind="returns",
+    q_list=(2, 4),
+    ljung_box_lags=(5, 10),
+    rolling_window=120,
+    rolling_step=20,
+)
+outcome = run_weak_form_battery(returns, config=config)
+print(outcome.rolling["n_windows"])
+```
+
+Offline runnable examples are available under `examples/`:
+- `examples/basic_battery.py`
+- `examples/rolling_battery.py`
+- `examples/variance_ratio_only.py`
+- `examples/empirical_application.py`
 
 ### Running Simulations
 
@@ -237,11 +270,18 @@ variance-test/
 │   └── variance_test/
 │       ├── __init__.py
 │       ├── core.py               # Core VRT implementation (EMH class)
+│       ├── battery.py            # Weak-form battery v1
+│       ├── rolling.py            # Internal rolling helpers
+│       ├── data.py               # Input normalization
+│       ├── models.py             # Dataclass contracts
 │       ├── price_paths.py        # Stochastic process generators
 │       ├── simulation.py         # Simulation framework and CLI
 │       └── visuals.py            # Plotting utilities
 ├── examples/
-│   └── empirical_application.py  # Optional external example (uses external deps)
+│   ├── basic_battery.py          # Offline battery example (full sample)
+│   ├── rolling_battery.py        # Offline battery example (rolling mode)
+│   ├── variance_ratio_only.py    # Offline EMH.vrt usage example
+│   └── empirical_application.py  # Optional external example
 ├── tests/
 ├── pyproject.toml
 ├── README.md

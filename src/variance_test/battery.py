@@ -9,6 +9,7 @@ from statsmodels.stats import diagnostic
 from .core import EMH
 from .data import normalize_series
 from .models import BatteryConfig, BatteryOutcome, TestOutcome
+from .rolling import _build_rolling_results
 
 
 def _validate_battery_compatibility(normalized, config: BatteryConfig) -> None:
@@ -102,7 +103,13 @@ def _apply_holm_bonferroni(vr_outcomes: list[TestOutcome], alpha: float) -> dict
     }
 
 
-def _run_ljung_box(series: np.ndarray, lags: tuple[int, ...], alpha: float, name: str, null_hypothesis: str) -> TestOutcome:
+def _run_ljung_box(
+    series: np.ndarray,
+    lags: tuple[int, ...],
+    alpha: float,
+    name: str,
+    null_hypothesis: str,
+) -> TestOutcome:
     """Run Ljung-Box test and select the lag with minimum p-value."""
     lb_stat, lb_pvalue = diagnostic.acorr_ljungbox(series, lags=list(lags), return_df=False)
 
@@ -284,13 +291,19 @@ def _build_battery_summary(tests: dict[str, TestOutcome]) -> dict[str, object]:
     }
 
 
-def run_weak_form_battery(series, config: BatteryConfig | None = None) -> BatteryOutcome:
+def run_weak_form_battery(
+    series,
+    config: BatteryConfig | None = None,
+) -> BatteryOutcome:
     """Run the weak-form efficiency battery v1 and return structured outcomes."""
     if config is None:
         config = BatteryConfig()
 
     normalized = normalize_series(series, input_kind=config.input_kind)
     _validate_battery_compatibility(normalized, config)
+
+    if config.rolling_window is not None and config.rolling_window > normalized.n_raw:
+        raise ValueError("config.rolling_window must satisfy <= normalized.n_raw.")
 
     tests: dict[str, TestOutcome] = {}
 
@@ -344,13 +357,17 @@ def run_weak_form_battery(series, config: BatteryConfig | None = None) -> Batter
     for outcome in tests.values():
         warnings.extend(outcome.warnings)
 
+    rolling = None
+    if config.rolling_window is not None:
+        rolling = _build_rolling_results(normalized=normalized, config=config)
+
     return BatteryOutcome(
         input_kind=config.input_kind,
         n_obs=normalized.n_raw,
         returns_n_obs=normalized.n_returns,
         tests=tests,
         multiple_testing=multiple_testing,
-        rolling=None,
+        rolling=rolling,
         warnings=warnings,
     )
 
