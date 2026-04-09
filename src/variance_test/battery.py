@@ -286,9 +286,9 @@ def _run_runs_test(normalized, alpha: float) -> TestOutcome:
     )
 
 
-def _run_arch_lm(series: np.ndarray, nlags: int, alpha: float) -> TestOutcome:
+def _run_arch_lm(returns: np.ndarray, nlags: int, alpha: float) -> TestOutcome:
     """Run ARCH LM test on returns."""
-    lm_stat, lm_p_value, f_stat, f_p_value = diagnostic.het_arch(series, nlags=nlags)
+    lm_stat, lm_p_value, f_stat, f_p_value = diagnostic.het_arch(returns, nlags=nlags)
 
     values = [lm_stat, lm_p_value, f_stat, f_p_value]
     if not all(np.isfinite(value) for value in values):

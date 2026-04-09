@@ -57,7 +57,10 @@ class EMH(object):
         if denom_a <= 0:
             raise ValueError("Degrees of freedom must be positive.")
 
-        sigma_a /= denom_a
+        # Lo-MacKinlay variance-ratio scaling:
+        # the q-step variance estimator must be normalized by q so it is
+        # comparable to the 1-step variance estimator under the random walk null.
+        sigma_a /= (denom_a * q)
 
         # Calculate sigma_b using weighted autocovariances (Lo & MacKinlay 1988, eq. 6a)
         # sigma_b(q) = sum_{j=0}^{q-1} [2(q-j)/q] * gamma(j)
