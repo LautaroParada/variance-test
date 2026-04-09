@@ -9,6 +9,7 @@ from statsmodels.stats import diagnostic
 from .core import EMH
 from .data import normalize_series
 from .models import BatteryConfig, BatteryOutcome, TestOutcome
+from .rolling import _build_rolling_results
 
 
 def _validate_battery_compatibility(normalized, config: BatteryConfig) -> None:
@@ -32,48 +33,77 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
     outcomes: dict[str, TestOutcome] = {}
 
     for q in config.q_list:
-        z_score, p_value = emh.vrt(
-            X=normalized.log_prices,
-            q=q,
-            heteroskedastic=True,
-            centered=True,
-            unbiased=True,
-            annualize=False,
-            input_kind="log_prices",
-            alternative="two-sided",
-        )
         name = f"variance_ratio_q{q}"
-        outcomes[name] = TestOutcome(
-            name=name,
-            null_hypothesis="Variance ratio equals 1 under the random walk null.",
-            statistic=float(z_score),
-            p_value=float(p_value),
-            alpha=config.alpha,
-            reject_null=bool(p_value < config.alpha),
-            metadata={
-                "q": q,
-                "heteroskedastic": True,
-                "centered": True,
-                "unbiased": True,
-                "annualize": False,
-                "input_kind_used": "log_prices",
-                "alternative": "two-sided",
-            },
-            warnings=[],
-        )
+
+        try:
+            z_score, p_value = emh.vrt(
+                X=normalized.log_prices,
+                q=q,
+                heteroskedastic=True,
+                centered=True,
+                unbiased=True,
+                annualize=False,
+                input_kind="log_prices",
+                alternative="two-sided",
+            )
+
+            outcomes[name] = TestOutcome(
+                name=name,
+                null_hypothesis="Variance ratio equals 1 under the random walk null.",
+                statistic=float(z_score),
+                p_value=float(p_value),
+                alpha=config.alpha,
+                reject_null=bool(p_value < config.alpha),
+                metadata={
+                    "q": q,
+                    "heteroskedastic": True,
+                    "centered": True,
+                    "unbiased": True,
+                    "annualize": False,
+                    "input_kind_used": "log_prices",
+                    "alternative": "two-sided",
+                },
+                warnings=[],
+            )
+
+        except ValueError as exc:
+            outcomes[name] = TestOutcome(
+                name=name,
+                null_hypothesis="Variance ratio equals 1 under the random walk null.",
+                statistic=None,
+                p_value=None,
+                alpha=config.alpha,
+                reject_null=None,
+                metadata={
+                    "q": q,
+                    "heteroskedastic": True,
+                    "centered": True,
+                    "unbiased": True,
+                    "annualize": False,
+                    "input_kind_used": "log_prices",
+                    "alternative": "two-sided",
+                    "reason": str(exc),
+                },
+                warnings=[f"Variance ratio not computable for q={q}: {exc}"],
+            )
 
     return outcomes
 
 
 def _apply_holm_bonferroni(vr_outcomes: list[TestOutcome], alpha: float) -> dict[str, object]:
-    """Apply Holm-Bonferroni correction to the variance-ratio family."""
-    family = [outcome.name for outcome in vr_outcomes]
-    raw_p_values = {outcome.name: float(outcome.p_value) for outcome in vr_outcomes}
+    """Apply Holm-Bonferroni correction to the variance-ratio family.
 
-    sorted_outcomes = sorted(vr_outcomes, key=lambda item: (float(item.p_value), item.name))
+    Non-computable tests (p_value is None) are treated as non-rejections and
+    are excluded from the step-down ordering, but still appear in the summary.
+    """
+    family = [outcome.name for outcome in vr_outcomes]
+    raw_p_values = {outcome.name: outcome.p_value for outcome in vr_outcomes}
+
+    computable = [outcome for outcome in vr_outcomes if outcome.p_value is not None]
+    sorted_outcomes = sorted(computable, key=lambda item: (float(item.p_value), item.name))
     m = len(sorted_outcomes)
 
-    thresholds: dict[str, float] = {}
+    thresholds: dict[str, float | None] = {name: None for name in family}
     rejections: dict[str, bool] = {name: False for name in family}
 
     stop = False
@@ -102,45 +132,67 @@ def _apply_holm_bonferroni(vr_outcomes: list[TestOutcome], alpha: float) -> dict
     }
 
 
-def _run_ljung_box(series: np.ndarray, lags: tuple[int, ...], alpha: float, name: str, null_hypothesis: str) -> TestOutcome:
+def _run_ljung_box(
+    series: np.ndarray,
+    lags: tuple[int, ...],
+    alpha: float,
+    name: str,
+    null_hypothesis: str,
+) -> TestOutcome:
     """Run Ljung-Box test and select the lag with minimum p-value."""
-    lb_stat, lb_pvalue = diagnostic.acorr_ljungbox(series, lags=list(lags), return_df=False)
+    result = diagnostic.acorr_ljungbox(series, lags=list(lags), return_df=True)
+
+    lb_stat = result["lb_stat"].to_numpy(dtype=float)
+    lb_pvalue = result["lb_pvalue"].to_numpy(dtype=float)
 
     per_lag: dict[int, dict[str, float | bool]] = {}
-    selected_lag = int(lags[0])
-    selected_p = float(lb_pvalue[0])
 
-    for lag, stat_value, p_value in zip(lags, lb_stat, lb_pvalue):
-        lag_int = int(lag)
-        stat_float = float(stat_value)
-        p_float = float(p_value)
-        per_lag[lag_int] = {
-            "statistic": stat_float,
-            "p_value": p_float,
-            "reject_null": bool(p_float < alpha),
+    finite_pairs = [
+        (int(lag), float(stat_value), float(p_value))
+        for lag, stat_value, p_value in zip(lags, lb_stat, lb_pvalue)
+        if np.isfinite(stat_value) and np.isfinite(p_value)
+    ]
+
+    if not finite_pairs:
+        return TestOutcome(
+            name=name,
+            null_hypothesis=null_hypothesis,
+            statistic=None,
+            p_value=None,
+            alpha=alpha,
+            reject_null=None,
+            metadata={
+                "tested_lags": list(lags),
+                "selected_lag": None,
+                "per_lag": {},
+                "reason": "Ljung-Box statistics are not finite for this series.",
+            },
+            warnings=[f"{name} not computable: Ljung-Box statistics are not finite."],
+        )
+
+    selected_lag, selected_stat, selected_p = min(finite_pairs, key=lambda x: (x[2], x[0]))
+
+    for lag, stat_value, p_value in finite_pairs:
+        per_lag[int(lag)] = {
+            "statistic": float(stat_value),
+            "p_value": float(p_value),
+            "reject_null": bool(p_value < alpha),
         }
-
-        if p_float < selected_p or (np.isclose(p_float, selected_p) and lag_int < selected_lag):
-            selected_lag = lag_int
-            selected_p = p_float
-
-    selected_stat = float(per_lag[selected_lag]["statistic"])
 
     return TestOutcome(
         name=name,
         null_hypothesis=null_hypothesis,
-        statistic=selected_stat,
-        p_value=selected_p,
+        statistic=float(selected_stat),
+        p_value=float(selected_p),
         alpha=alpha,
         reject_null=bool(selected_p < alpha),
         metadata={
             "tested_lags": list(lags),
-            "selected_lag": selected_lag,
+            "selected_lag": int(selected_lag),
             "per_lag": per_lag,
         },
         warnings=[],
     )
-
 
 def _run_runs_test(normalized, alpha: float) -> TestOutcome:
     """Run bilateral Wald-Wolfowitz runs test over non-zero return signs."""
@@ -235,22 +287,47 @@ def _run_runs_test(normalized, alpha: float) -> TestOutcome:
 
 
 def _run_arch_lm(returns: np.ndarray, nlags: int, alpha: float) -> TestOutcome:
-    """Run ARCH LM test and return a standardized TestOutcome."""
+    """Run ARCH LM test on returns."""
     lm_stat, lm_p_value, f_stat, f_p_value = diagnostic.het_arch(returns, nlags=nlags)
+
+    values = [lm_stat, lm_p_value, f_stat, f_p_value]
+    if not all(np.isfinite(value) for value in values):
+        return TestOutcome(
+            name="arch_lm",
+            null_hypothesis="No ARCH effects are present up to the tested lag order.",
+            statistic=None,
+            p_value=None,
+            alpha=alpha,
+            reject_null=None,
+            metadata={
+                "nlags": nlags,
+                "lm_stat": None,
+                "lm_p_value": None,
+                "f_stat": None,
+                "f_p_value": None,
+                "reason": "ARCH LM statistics are not finite for this series.",
+            },
+            warnings=["arch_lm not computable: ARCH LM statistics are not finite."],
+        )
+
+    lm_stat = float(lm_stat)
+    lm_p_value = float(lm_p_value)
+    f_stat = float(f_stat)
+    f_p_value = float(f_p_value)
 
     return TestOutcome(
         name="arch_lm",
         null_hypothesis="No ARCH effects are present up to the tested lag order.",
-        statistic=float(lm_stat),
-        p_value=float(lm_p_value),
+        statistic=lm_stat,
+        p_value=lm_p_value,
         alpha=alpha,
         reject_null=bool(lm_p_value < alpha),
         metadata={
             "nlags": nlags,
-            "lm_stat": float(lm_stat),
-            "lm_p_value": float(lm_p_value),
-            "f_stat": float(f_stat),
-            "f_p_value": float(f_p_value),
+            "lm_stat": lm_stat,
+            "lm_p_value": lm_p_value,
+            "f_stat": f_stat,
+            "f_p_value": f_p_value,
         },
         warnings=[],
     )
@@ -284,13 +361,19 @@ def _build_battery_summary(tests: dict[str, TestOutcome]) -> dict[str, object]:
     }
 
 
-def run_weak_form_battery(series, config: BatteryConfig | None = None) -> BatteryOutcome:
+def run_weak_form_battery(
+    series,
+    config: BatteryConfig | None = None,
+) -> BatteryOutcome:
     """Run the weak-form efficiency battery v1 and return structured outcomes."""
     if config is None:
         config = BatteryConfig()
 
     normalized = normalize_series(series, input_kind=config.input_kind)
     _validate_battery_compatibility(normalized, config)
+
+    if config.rolling_window is not None and config.rolling_window > normalized.n_raw:
+        raise ValueError("config.rolling_window must satisfy <= normalized.n_raw.")
 
     tests: dict[str, TestOutcome] = {}
 
@@ -344,13 +427,17 @@ def run_weak_form_battery(series, config: BatteryConfig | None = None) -> Batter
     for outcome in tests.values():
         warnings.extend(outcome.warnings)
 
+    rolling = None
+    if config.rolling_window is not None:
+        rolling = _build_rolling_results(normalized=normalized, config=config)
+
     return BatteryOutcome(
         input_kind=config.input_kind,
         n_obs=normalized.n_raw,
         returns_n_obs=normalized.n_returns,
         tests=tests,
         multiple_testing=multiple_testing,
-        rolling=None,
+        rolling=rolling,
         warnings=warnings,
     )
 
