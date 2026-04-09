@@ -2,6 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/variance-test?style=flat)](https://pypi.org/project/variance-test/)
 [![Python versions](https://img.shields.io/pypi/pyversions/variance-test?style=flat)](https://pypi.org/project/variance-test/)
+[![GitHub stars](https://img.shields.io/github/stars/LautaroParada/variance-test?style=flat)](https://github.com/LautaroParada/variance-test/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/LautaroParada/variance-test?style=flat)](https://github.com/LautaroParada/variance-test/commits/master)
 [![License](https://img.shields.io/github/license/LautaroParada/variance-test?style=flat)](https://github.com/LautaroParada/variance-test/blob/master/LICENSE)
 
 Testing whether a return series is compatible with a random walk usually means stitching together a variance ratio implementation, a Ljung-Box call, an ARCH-LM check, a runs test, and some ad-hoc glue code to normalize inputs and interpret results. Then you repeat it for rolling windows. Then you do it again for the next asset.
