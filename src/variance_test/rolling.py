@@ -60,7 +60,7 @@ def _compute_rolling_variance_ratio(normalized, config) -> dict[str, list[dict[s
                 z_score, p_value = emh.vrt(
                     X=window_normalized.log_prices,
                     q=q,
-                    heteroskedastic=True,
+                    heteroskedastic=False,
                     centered=True,
                     unbiased=True,
                     annualize=False,
@@ -124,33 +124,42 @@ def _compute_rolling_ljung_box(
             continue
 
         try:
-            lb_stat, lb_pvalue = diagnostic.acorr_ljungbox(
+            result = diagnostic.acorr_ljungbox(
                 series,
                 lags=list(config.ljung_box_lags),
-                return_df=False,
+                return_df=True,
             )
 
-            selected_lag = int(config.ljung_box_lags[0])
-            selected_p = float(lb_pvalue[0])
-            selected_stat = float(lb_stat[0])
+            lb_stat = result["lb_stat"].to_numpy(dtype=float)
+            lb_pvalue = result["lb_pvalue"].to_numpy(dtype=float)
 
-            for lag, stat_value, p_value in zip(config.ljung_box_lags, lb_stat, lb_pvalue):
-                lag_int = int(lag)
-                stat_float = float(stat_value)
-                p_float = float(p_value)
-                if p_float < selected_p or (
-                    np.isclose(p_float, selected_p) and lag_int < selected_lag
-                ):
-                    selected_lag = lag_int
-                    selected_p = p_float
-                    selected_stat = stat_float
+            finite_pairs = [
+                (int(lag), float(stat_value), float(p_value))
+                for lag, stat_value, p_value in zip(config.ljung_box_lags, lb_stat, lb_pvalue)
+                if np.isfinite(stat_value) and np.isfinite(p_value)
+            ]
+
+            if not finite_pairs:
+                outcomes.append(
+                    _non_computable_result(
+                        start=start,
+                        end=end,
+                        warning=f"{name} not computable for this window: Ljung-Box statistics are not finite.",
+                    )
+                )
+                continue
+
+            selected_lag, selected_stat, selected_p = min(
+                finite_pairs,
+                key=lambda x: (x[2], x[0]),
+            )
 
             outcomes.append(
                 {
                     "start": start,
                     "end": end,
-                    "statistic": selected_stat,
-                    "p_value": selected_p,
+                    "statistic": float(selected_stat),
+                    "p_value": float(selected_p),
                     "reject_null": bool(selected_p < config.alpha),
                     "warning": None,
                 }

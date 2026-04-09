@@ -39,7 +39,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
             z_score, p_value = emh.vrt(
                 X=normalized.log_prices,
                 q=q,
-                heteroskedastic=True,
+                heteroskedastic=False,
                 centered=True,
                 unbiased=True,
                 annualize=False,
@@ -56,7 +56,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
                 reject_null=bool(p_value < config.alpha),
                 metadata={
                     "q": q,
-                    "heteroskedastic": True,
+                    "heteroskedastic": False,
                     "centered": True,
                     "unbiased": True,
                     "annualize": False,
@@ -76,7 +76,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
                 reject_null=None,
                 metadata={
                     "q": q,
-                    "heteroskedastic": True,
+                    "heteroskedastic": False,
                     "centered": True,
                     "unbiased": True,
                     "annualize": False,
@@ -140,43 +140,59 @@ def _run_ljung_box(
     null_hypothesis: str,
 ) -> TestOutcome:
     """Run Ljung-Box test and select the lag with minimum p-value."""
-    lb_stat, lb_pvalue = diagnostic.acorr_ljungbox(series, lags=list(lags), return_df=False)
+    result = diagnostic.acorr_ljungbox(series, lags=list(lags), return_df=True)
+
+    lb_stat = result["lb_stat"].to_numpy(dtype=float)
+    lb_pvalue = result["lb_pvalue"].to_numpy(dtype=float)
 
     per_lag: dict[int, dict[str, float | bool]] = {}
-    selected_lag = int(lags[0])
-    selected_p = float(lb_pvalue[0])
 
-    for lag, stat_value, p_value in zip(lags, lb_stat, lb_pvalue):
-        lag_int = int(lag)
-        stat_float = float(stat_value)
-        p_float = float(p_value)
-        per_lag[lag_int] = {
-            "statistic": stat_float,
-            "p_value": p_float,
-            "reject_null": bool(p_float < alpha),
+    finite_pairs = [
+        (int(lag), float(stat_value), float(p_value))
+        for lag, stat_value, p_value in zip(lags, lb_stat, lb_pvalue)
+        if np.isfinite(stat_value) and np.isfinite(p_value)
+    ]
+
+    if not finite_pairs:
+        return TestOutcome(
+            name=name,
+            null_hypothesis=null_hypothesis,
+            statistic=None,
+            p_value=None,
+            alpha=alpha,
+            reject_null=None,
+            metadata={
+                "tested_lags": list(lags),
+                "selected_lag": None,
+                "per_lag": {},
+                "reason": "Ljung-Box statistics are not finite for this series.",
+            },
+            warnings=[f"{name} not computable: Ljung-Box statistics are not finite."],
+        )
+
+    selected_lag, selected_stat, selected_p = min(finite_pairs, key=lambda x: (x[2], x[0]))
+
+    for lag, stat_value, p_value in finite_pairs:
+        per_lag[int(lag)] = {
+            "statistic": float(stat_value),
+            "p_value": float(p_value),
+            "reject_null": bool(p_value < alpha),
         }
-
-        if p_float < selected_p or (np.isclose(p_float, selected_p) and lag_int < selected_lag):
-            selected_lag = lag_int
-            selected_p = p_float
-
-    selected_stat = float(per_lag[selected_lag]["statistic"])
 
     return TestOutcome(
         name=name,
         null_hypothesis=null_hypothesis,
-        statistic=selected_stat,
-        p_value=selected_p,
+        statistic=float(selected_stat),
+        p_value=float(selected_p),
         alpha=alpha,
         reject_null=bool(selected_p < alpha),
         metadata={
             "tested_lags": list(lags),
-            "selected_lag": selected_lag,
+            "selected_lag": int(selected_lag),
             "per_lag": per_lag,
         },
         warnings=[],
     )
-
 
 def _run_runs_test(normalized, alpha: float) -> TestOutcome:
     """Run bilateral Wald-Wolfowitz runs test over non-zero return signs."""
@@ -270,23 +286,48 @@ def _run_runs_test(normalized, alpha: float) -> TestOutcome:
     )
 
 
-def _run_arch_lm(returns: np.ndarray, nlags: int, alpha: float) -> TestOutcome:
-    """Run ARCH LM test and return a standardized TestOutcome."""
-    lm_stat, lm_p_value, f_stat, f_p_value = diagnostic.het_arch(returns, nlags=nlags)
+def _run_arch_lm(series: np.ndarray, nlags: int, alpha: float) -> TestOutcome:
+    """Run ARCH LM test on returns."""
+    lm_stat, lm_p_value, f_stat, f_p_value = diagnostic.het_arch(series, nlags=nlags)
+
+    values = [lm_stat, lm_p_value, f_stat, f_p_value]
+    if not all(np.isfinite(value) for value in values):
+        return TestOutcome(
+            name="arch_lm",
+            null_hypothesis="No ARCH effects are present up to the tested lag order.",
+            statistic=None,
+            p_value=None,
+            alpha=alpha,
+            reject_null=None,
+            metadata={
+                "nlags": nlags,
+                "lm_stat": None,
+                "lm_p_value": None,
+                "f_stat": None,
+                "f_p_value": None,
+                "reason": "ARCH LM statistics are not finite for this series.",
+            },
+            warnings=["arch_lm not computable: ARCH LM statistics are not finite."],
+        )
+
+    lm_stat = float(lm_stat)
+    lm_p_value = float(lm_p_value)
+    f_stat = float(f_stat)
+    f_p_value = float(f_p_value)
 
     return TestOutcome(
         name="arch_lm",
         null_hypothesis="No ARCH effects are present up to the tested lag order.",
-        statistic=float(lm_stat),
-        p_value=float(lm_p_value),
+        statistic=lm_stat,
+        p_value=lm_p_value,
         alpha=alpha,
         reject_null=bool(lm_p_value < alpha),
         metadata={
             "nlags": nlags,
-            "lm_stat": float(lm_stat),
-            "lm_p_value": float(lm_p_value),
-            "f_stat": float(f_stat),
-            "f_p_value": float(f_p_value),
+            "lm_stat": lm_stat,
+            "lm_p_value": lm_p_value,
+            "f_stat": f_stat,
+            "f_p_value": f_p_value,
         },
         warnings=[],
     )
