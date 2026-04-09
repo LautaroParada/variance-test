@@ -39,7 +39,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
             z_score, p_value = emh.vrt(
                 X=normalized.log_prices,
                 q=q,
-                heteroskedastic=False,
+                heteroskedastic=True,
                 centered=True,
                 unbiased=True,
                 annualize=False,
@@ -56,7 +56,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
                 reject_null=bool(p_value < config.alpha),
                 metadata={
                     "q": q,
-                    "heteroskedastic": False,
+                    "heteroskedastic": True,
                     "centered": True,
                     "unbiased": True,
                     "annualize": False,

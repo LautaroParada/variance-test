@@ -60,7 +60,7 @@ def _compute_rolling_variance_ratio(normalized, config) -> dict[str, list[dict[s
                 z_score, p_value = emh.vrt(
                     X=window_normalized.log_prices,
                     q=q,
-                    heteroskedastic=False,
+                    heteroskedastic=True,
                     centered=True,
                     unbiased=True,
                     annualize=False,
