@@ -28,7 +28,7 @@ class EMH(object):
         unbiased: bool = True,
         annualize: bool = True,
     ) -> tuple[float, float]:
-        """Compute both volatility estimators in a single pass for efficiency."""
+        """Compute q-period and 1-period variance estimators for the variance-ratio test."""
 
         if q <= 0:
             raise ValueError("Aggregation horizon q must be a positive integer.")
@@ -40,60 +40,33 @@ class EMH(object):
 
         mu_est = (series[-1] - series[0]) / n_obs
 
-        max_index = n_obs - 1
-        num_increments = max_index // q
-        if num_increments < 1:
-            raise ValueError("Not enough data to compute aggregated first differences.")
+        # 1-period demeaned increments
+        one_period_diffs = series[1:] - series[:-1] - mu_est
+        n_one = one_period_diffs.size
+        if n_one < 1:
+            raise ValueError("Not enough one-period increments to estimate variance.")
 
-        upper_bound = int(np.floor(n_obs / q)) * q
-        if upper_bound <= q:
-            raise ValueError("At least two aggregated periods are required to estimate variance.")
+        denom_b = (n_one - 1) if unbiased else n_one
+        if denom_b <= 0:
+            raise ValueError("Degrees of freedom for one-period variance must be positive.")
 
-        increments = series[q : (num_increments + 1) * q : q] - series[: num_increments * q : q]
-        increments = increments - (q * mu_est)
-        sigma_a = float(np.dot(increments, increments))
+        sigma_b = float(np.dot(one_period_diffs, one_period_diffs)) / denom_b
 
-        denom_a = num_increments - 1 if unbiased else num_increments
+        # Overlapping q-period demeaned increments
+        q_period_diffs = series[q:] - series[:-q] - (q * mu_est)
+        n_q = q_period_diffs.size
+        if n_q < 1:
+            raise ValueError("Not enough q-period increments to estimate variance.")
+
+        denom_a = (n_q - 1) if unbiased else n_q
         if denom_a <= 0:
-            raise ValueError("Degrees of freedom must be positive.")
+            raise ValueError("Degrees of freedom for q-period variance must be positive.")
 
-        # Lo-MacKinlay variance-ratio scaling:
-        # the q-step variance estimator must be normalized by q so it is
-        # comparable to the 1-step variance estimator under the random walk null.
-        sigma_a /= (denom_a * q)
+        # Normalize by q so it is comparable to the 1-period variance under the null
+        sigma_a = float(np.dot(q_period_diffs, q_period_diffs)) / (denom_a * q)
 
-        # Calculate sigma_b using weighted autocovariances (Lo & MacKinlay 1988, eq. 6a)
-        # sigma_b(q) = sum_{j=0}^{q-1} [2(q-j)/q] * gamma(j)
-        # where gamma(j) is the j-th lag autocovariance of 1-period returns
-        # Use observations from 0 to upper_bound (inclusive), giving upper_bound one-period differences
-        # Edge case: when upper_bound = n_obs, we can only access up to n_obs-1
-        if upper_bound < n_obs:
-            one_period_diffs = series[1:upper_bound + 1] - series[:upper_bound] - mu_est
-        else:
-            # When upper_bound = n_obs, we can only get (n_obs - 1) differences
-            one_period_diffs = series[1:n_obs] - series[:n_obs - 1] - mu_est
-        n_diffs = len(one_period_diffs)
-        
-        sigma_b = 0.0
-        for j in range(q):
-            weight = (2 * (q - j) / q) if j > 0 else 1.0
-            
-            if j == 0:
-                # Variance (lag-0 autocovariance)
-                if unbiased:
-                    gamma_j = float(np.dot(one_period_diffs, one_period_diffs)) / (n_diffs - 1)
-                else:
-                    gamma_j = float(np.dot(one_period_diffs, one_period_diffs)) / n_diffs
-            else:
-                # Autocovariance at lag j
-                lead = one_period_diffs[j:]
-                lagged = one_period_diffs[:-j]
-                if unbiased:
-                    gamma_j = float(np.dot(lead, lagged)) / (n_diffs - j)
-                else:
-                    gamma_j = float(np.dot(lead, lagged)) / n_diffs
-            
-            sigma_b += weight * gamma_j
+        if sigma_a <= 0 or sigma_b <= 0:
+            raise ValueError("Variance estimates must be positive.")
 
         if annualize:
             sigma_a = float(np.sqrt(sigma_a * 252))

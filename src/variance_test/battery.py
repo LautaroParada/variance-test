@@ -76,7 +76,7 @@ def _run_variance_ratio_family(normalized, config: BatteryConfig) -> dict[str, T
                 reject_null=None,
                 metadata={
                     "q": q,
-                    "heteroskedastic": False,
+                    "heteroskedastic": True,
                     "centered": True,
                     "unbiased": True,
                     "annualize": False,
