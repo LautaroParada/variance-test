@@ -3,7 +3,7 @@
 from .battery import run_weak_form_battery
 from .core import EMH
 from .data import NormalizedSeries, normalize_series
-from .models import BatteryConfig, BatteryOutcome, TestOutcome
+from .models import BatteryConfig, BatteryOutcome, RobustVRConfig, TestOutcome
 from .price_paths import PricePaths
 from .simulation import (
     SimulationConfig,
@@ -26,6 +26,7 @@ __all__ = [
     "NormalizedSeries",
     "normalize_series",
     "BatteryConfig",
+    "RobustVRConfig",
     "TestOutcome",
     "BatteryOutcome",
     "run_weak_form_battery",

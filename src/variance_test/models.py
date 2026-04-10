@@ -6,6 +6,41 @@ from dataclasses import dataclass
 
 
 @dataclass
+class RobustVRConfig:
+    """Configuration contract for optional robust variance-ratio diagnostics."""
+
+    enabled: bool = False
+    enable_avr: bool = True
+    enable_wbavr: bool = True
+    enable_chow_denning: bool = True
+    bootstrap_reps: int = 999
+    bootstrap_seed: int | None = None
+    wild_weights: str = "rademacher"
+    chow_denning_calibration: str = "sidak_normal"
+    q_list: tuple[int, ...] | None = None
+    max_automatic_q: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.bootstrap_reps < 199:
+            raise ValueError("bootstrap_reps must be at least 199.")
+        if self.wild_weights != "rademacher":
+            raise ValueError("wild_weights currently supports only 'rademacher'.")
+        if self.chow_denning_calibration != "sidak_normal":
+            raise ValueError(
+                "chow_denning_calibration currently supports only 'sidak_normal'."
+            )
+        if self.q_list is not None:
+            if not self.q_list:
+                raise ValueError("q_list cannot be empty when provided.")
+            if any((not isinstance(q, int)) or q <= 0 for q in self.q_list):
+                raise ValueError("All q_list values must be positive integers.")
+            if any(curr <= prev for prev, curr in zip(self.q_list, self.q_list[1:])):
+                raise ValueError("q_list must be strictly increasing.")
+        if self.max_automatic_q is not None and self.max_automatic_q < 2:
+            raise ValueError("max_automatic_q must be at least 2 when provided.")
+
+
+@dataclass
 class BatteryConfig:
     """Configuration contract for the weak-form battery orchestration layer."""
 
@@ -18,6 +53,7 @@ class BatteryConfig:
     rolling_window: int | None = None
     rolling_step: int = 1
     seed: int | None = None
+    robust_vr: RobustVRConfig | None = None
 
     def __post_init__(self) -> None:
         if self.input_kind not in {"log_prices", "returns"}:
@@ -42,6 +78,8 @@ class BatteryConfig:
             raise ValueError("rolling_window must be None or at least 2.")
         if self.rolling_step < 1:
             raise ValueError("rolling_step must be at least 1.")
+        if self.robust_vr is not None and not isinstance(self.robust_vr, RobustVRConfig):
+            raise ValueError("robust_vr must be None or a RobustVRConfig instance.")
 
 
 @dataclass
