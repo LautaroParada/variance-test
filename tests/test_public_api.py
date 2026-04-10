@@ -8,6 +8,7 @@ from variance_test import (
     EMH,
     NormalizedSeries,
     PricePaths,
+    RobustVRConfig,
     SimulationConfig,
     SimulationResults,
     TestOutcome,
@@ -32,6 +33,7 @@ EXPECTED_PUBLIC_API = {
     "NormalizedSeries",
     "normalize_series",
     "BatteryConfig",
+    "RobustVRConfig",
     "TestOutcome",
     "BatteryOutcome",
     "run_weak_form_battery",
@@ -59,18 +61,19 @@ def test_simulation_entities_importable_from_root() -> None:
 
 
 def test_new_data_contract_api_importable_from_root() -> None:
-    """Sprint 2 data/model contracts must be importable from package root."""
+    """Data/model contracts must be importable from package root."""
     assert NormalizedSeries is not None
     assert normalize_series is not None
     assert BatteryConfig is not None
+    assert RobustVRConfig is not None
     assert TestOutcome is not None
     assert BatteryOutcome is not None
-
 
 
 def test_run_weak_form_battery_importable_from_root() -> None:
     """run_weak_form_battery must be importable from package root."""
     assert run_weak_form_battery is not None
+
 
 def test_all_contains_exact_public_api() -> None:
     """__all__ must match the required minimal API exactly."""

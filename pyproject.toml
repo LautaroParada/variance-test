@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "variance-test"
-version = "0.1.0"
-description = "Variance Ratio Test utilities for stochastic price processes."
+version = "0.2.0"
+description = "Weak-form efficiency diagnostics with classic and robust variance-ratio support."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
